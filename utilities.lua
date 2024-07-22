@@ -51,24 +51,19 @@ function msgUser(msg)
     print(ADDON_SYMBOL_TABLE.myNameInColor .. ": " .. msg)
 end
 
-function isInCombatLockdown(actionDescription)
+function isInCombatLockdown(actionDescription, isQuiet)
     if InCombatLockdown() then
         local msg = actionDescription or "That action"
-        zebug.warn:print(msg .. " is not allowed by Blizzard during combat.")
+        local printer = isQuiet and zebug.info or zebug.warn
+        printer:print(msg .. " is not allowed by Blizzard during combat.")
         return true
     else
         return false
     end
 end
 
-function isInCombatLockdownQuiet()
-    if InCombatLockdown() then
-        local msg = actionDescription or "That action"
-        zebug.info:print(msg .. " is not allowed by Blizzard during combat.")
-        return true
-    else
-        return false
-    end
+function isInCombatLockdownQuiet(actionDescription)
+    isInCombatLockdown(actionDescription, true)
 end
 
 function getIdForCurrentToon()

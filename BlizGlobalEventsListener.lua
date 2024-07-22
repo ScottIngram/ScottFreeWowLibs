@@ -19,7 +19,7 @@ BlizGlobalEventsListener = {}
 ---@param zelf table will act as the "self" object in all eventHandlers
 ---@param eventHandlers table<string, function> key -> "EVENT_NAME" , value -> handlerCallback
 ---@param addonLoadedHandlers table<string, function> key -> "OtherAddonName" , value -> funcToCallWhenOtherAddonLoads
--- Note: addons that load before yours will not be handled.  Use IsAddOnLoaded(addonName) instead
+-- Note: addons that load before yours will not be handled.  Use C_AddOns.IsAddOnLoaded(addonName) instead
 function BlizGlobalEventsListener:register(zelf, eventHandlers, addonLoadedHandlers)
     local dispatcher = function(listenerFrame, eventName, ...)
         eventHandlers[eventName](zelf, ...)
