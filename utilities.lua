@@ -43,7 +43,8 @@ function registerSlashCmd(cmdName, callbacks)
     end
 end
 
-function msgUser(msg)
+function msgUser(msg, isOptional)
+    if isOptional and Config and Config:get("muteLogin") then return end
     if not ADDON_SYMBOL_TABLE.myNameInColor then
         ADDON_SYMBOL_TABLE.myNameInColor = zebug.info:colorize(ADDON_NAME)
     end
@@ -54,7 +55,7 @@ end
 function isInCombatLockdown(actionDescription, isQuiet)
     if InCombatLockdown() then
         local msg = actionDescription or "That action"
-        local printer = isQuiet and zebug.info or zebug.warn
+        local printer = (isQuiet or true) and zebug.info or zebug.warn -- for the time being, make everything "quiet"
         printer:print(msg .. " is not allowed by Blizzard during combat.")
         return true
     else
