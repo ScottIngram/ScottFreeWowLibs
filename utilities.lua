@@ -44,7 +44,7 @@ function registerSlashCmd(cmdName, callbacks)
 end
 
 function msgUser(msg, isOptional)
-    if isOptional and Config:get("muteLogin") then return end
+    if isOptional and Config and Config:get("muteLogin") then return end
     if not ADDON_SYMBOL_TABLE.myNameInColor then
         ADDON_SYMBOL_TABLE.myNameInColor = zebug.info:colorize(ADDON_NAME)
     end
