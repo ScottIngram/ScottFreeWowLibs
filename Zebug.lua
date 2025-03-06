@@ -259,7 +259,7 @@ function Zebug:identifyOutsideCaller()
     -- skip past the top four (1 = this function, 2 = getLabel, 3 = some other Zebug function, 4 = the first possible non-Zebug function)
     -- start looking at callers 3 layers away and work back until we find something non-Zebug
     local stack = debugstack(4,4,0)
-    local tmp = stack
+    local originalStack = stack
     local j, line, isZebug, isTail, file, n, funcName
     local count = 1
     while stack do
@@ -270,9 +270,13 @@ function Zebug:identifyOutsideCaller()
         if isZebug or isTail then
             stack = string.sub(stack, j+1)
         else
-            _,_, file, n, funcName = string.find(line,'([%w_]+)%.[^"]*"]:(%d+):%s*in function%s*.(.+).\n');
+            -- the stack trace format changed in v11.1
+            _,_, file, n, funcName = string.find(line,[=[([%w_]+)%.[^:.]*]:(%d+):%s*in function%s*['<]([^'>]+)['>]]=])
+            -- this parsed the pre v11.1 format
+            -- _,_, file, n, funcName = string.find(line,'([%w_]+)%.[^"]*"]:(%d+):%s*in function%s*.(.+).');
             if not funcName then
-                print(tmp)
+                -- the parser failed so spit out some debugging info
+                print("WUT? ", originalStack)
                 funcName = ""
             end
             if string.find(funcName, "/") then
@@ -304,7 +308,7 @@ end
 function Zebug:getLabel()
     local file, n, func = self:identifyOutsideCaller()
     local name = self.methodName or func
-    name = (name and (name.."()~")) or ""
+    name = (name and (name.."()~")) or "<ANON>"
     local lineNumber = (n and "["..n.."]") or ""
     self.methodName = nil
     return (file and (file..":") or "") .. name .. lineNumber

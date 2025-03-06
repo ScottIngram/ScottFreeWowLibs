@@ -55,7 +55,7 @@ end
 function isInCombatLockdown(actionDescription, isQuiet)
     if InCombatLockdown() then
         local msg = actionDescription or "That action"
-        local printer = (isQuiet or true) and zebug.info or zebug.warn -- for the time being, make everything "quiet"
+        local printer = (isQuiet and true) and zebug.info or zebug.warn -- for the time being, make everything "quiet"
         printer:print(msg .. " is not allowed by Blizzard during combat.")
         return true
     else
