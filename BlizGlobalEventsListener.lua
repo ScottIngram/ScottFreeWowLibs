@@ -38,6 +38,8 @@ function BlizGlobalEventsListener:register(zelf, eventHandlers, addonLoadedHandl
             oldHandler(zelf)
         end
 
+        if not addonLoadedHandlers then return end
+
         -- find a handler for the addon that just triggered the ADDON_LOADED event
         for addonName, handler in pairs(addonLoadedHandlers) do
             zebug.trace:name("dispatcher"):print("loaded",loadedAddonName, "comparing to",addonName, "handler",handler)
