@@ -64,7 +64,78 @@ function isInCombatLockdown(actionDescription, isQuiet)
 end
 
 function isInCombatLockdownQuiet(actionDescription)
-    isInCombatLockdown(actionDescription, true)
+    return isInCombatLockdown(actionDescription, true)
+end
+
+local exeQ = {}
+-- delay a function call so that it is only executed outside of combat
+---@param qId string a unique identifier to ensure the same func doesn't get queued more than once
+---@param func function the command to execute once combat has ended
+function exeOnceNotInCombat(qId, func)
+
+    -- temporarily disable
+    --func()
+    --if true then return end
+
+    if isInCombatLockdownQuiet(qId) then
+        if not exeQ[qId] then
+            zebug.trace:line(3,"IN COMBAT so queueing", qId)
+            exeQ[qId] = true
+            C_Timer.After(1, function()
+                zebug.trace:line(3,"maybe combat, so trying", qId)
+                exeOnceNotInCombat(qId, func)
+                zebug.trace:line(3,"maybe combat, so tried ", qId)
+            end)
+        else
+            zebug.trace:line(3,"IN COMBAT and also already queued", qId)
+        end
+    else
+        zebug.trace:line(3,"no combat so immediately executing ->", qId)
+        exeQ[qId] = nil
+        func()
+    end
+end
+
+function safelySetAttribute(zelf, key, value)
+    local name = zelf.name or (zelf.getName and zelf:getName()) or (zelf.GetName and zelf:GetName()) or tostring(zelf) or "fucker"
+    local qId = name .. tostring(key) .. tostring(value)
+    exeOnceNotInCombat(qId, function()
+        zelf:SetAttribute(key, value)
+    end)
+end
+
+local throttleQ = {}
+local throttleT0 = {}
+
+-- throttle a function call so that it is only allowed to execute once during a give time frame, ie once per second and a half
+---@param qId string a unique identifier to ensure the same func doesn't get queued more than once
+---@param maxFreq number how often are we allowed to execute the function (in seconds, decimals allowed) ex 1.5
+---@param func function the command to execute
+---@param reportedElapsed number (optional) how long since this was last called (useful when the Bliz handlers provide ie, eg OnUpdate
+function throttle(qId, maxFreq, func, reportedElapsed)
+
+    -- temporarily disable
+    func()
+    if true then return end
+
+    if not throttleQ[qId] then
+        -- first time call
+        throttleQ[qId] = maxFreq
+        if not reportedElapsed then
+            throttleT0[qId] = time() -- set T0 to NOW!
+        end
+        -- always do the first call immediately
+        zebug.info:line(6,"TIMER FIRST", qId)
+        func()
+    else
+        -- subsequent calls
+        local elapsed = reportedElapsed or (time() - (throttleT0[qId] or 0))
+        if elapsed >= maxFreq then
+            zebug.info:line(6,"TIMER FOLLOWUP", qId, "elapsed",elapsed)
+            throttleT0[qId] = time() -- reset T0 to NOW!
+            func()
+        end
+    end
 end
 
 function getIdForCurrentToon()
