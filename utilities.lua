@@ -8,6 +8,8 @@
 local ADDON_NAME, ADDON_SYMBOL_TABLE = ...
 ADDON_SYMBOL_TABLE.Wormhole() -- Lua voodoo magic that replaces the current Global namespace with the Ufo object
 
+local zebug = Zebug:new(Zebug.OUTPUT.WARN)
+
 -------------------------------------------------------------------------------
 -- Utility Functions
 -------------------------------------------------------------------------------
@@ -100,7 +102,7 @@ function safelySetAttribute(zelf, key, value)
     local name = zelf.name or (zelf.getName and zelf:getName()) or (zelf.GetName and zelf:GetName()) or tostring(zelf) or "fucker"
     local qId = name .. tostring(key) .. tostring(value)
     exeOnceNotInCombat(qId, function()
-        zelf:SetAttribute(key, value)
+        zelf:SetAttribute(key, value, true) -- the "true" param is used by my custom SetAttribute() to mean "is trusted"
     end)
 end
 
@@ -115,8 +117,8 @@ local throttleT0 = {}
 function throttle(qId, maxFreq, func, reportedElapsed)
 
     -- temporarily disable
-    func()
-    if true then return end
+    --func()
+    --if true then return end
 
     if not throttleQ[qId] then
         -- first time call
