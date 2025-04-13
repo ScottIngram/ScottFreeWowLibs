@@ -52,11 +52,11 @@ ADDON_SYMBOL_TABLE.Zebug = Zebug
 -------------------------------------------------------------------------------
 
 local DEFAULT_ZEBUG = OUTPUT.WARN
-
 local ERR_MSG = "ZEBUGGER SYNTAX ERROR: invoke as zebug.info:func() not zebug.info.func()"
 local PREFIX = "<" .. ADDON_NAME .. ">"
 local DEFAULT_INDENT_CHAR = "#"
 local DEFAULT_INDENT_WIDTH = 0
+local DUMMY_INSTANCE
 
 local COLORS = { }
 COLORS[OUTPUT.TRACE] = GetClassColorObj("WARRIOR")
@@ -120,6 +120,17 @@ function Zebug:new(canSpeakOnlyIfThisLevel)
     zebugger.info  = newInstance(OUTPUT.INFO,  canSpeakOnlyIfThisLevel, sharedData)
     zebugger.trace = newInstance(OUTPUT.TRACE, canSpeakOnlyIfThisLevel, sharedData)
     setmetatable(zebugger, { __index = zebugger.info }) -- support syntax such as zebug:out() that bahaves as debuf.info:out()
+
+    if not DUMMY_INSTANCE then
+        local dummy = function() return DUMMY_INSTANCE end
+        DUMMY_INSTANCE = newInstance(OUTPUT.TRACE, canSpeakOnlyIfThisLevel, sharedData)
+        DUMMY_INSTANCE.alert = dummy
+        DUMMY_INSTANCE.dump = dummy
+        DUMMY_INSTANCE.dumpy = dummy
+        DUMMY_INSTANCE.print = dummy
+        DUMMY_INSTANCE.line = dummy
+    end
+
     return zebugger
 end
 
@@ -160,6 +171,15 @@ end
 function Zebug:setMethodName(methodName)
     self.methodName = methodName
     return self
+end
+
+---@return Zebug -- IntelliJ-EmmyLua annotation
+function Zebug:ifThen(conditional)
+    if conditional then
+        return self
+    else
+        return DUMMY_INSTANCE
+    end
 end
 
 Zebug.name = Zebug.setMethodName
