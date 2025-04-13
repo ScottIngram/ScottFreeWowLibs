@@ -106,38 +106,71 @@ function safelySetAttribute(zelf, key, value)
     end)
 end
 
-local throttleQ = {}
-local throttleT0 = {}
+local throttlerT0 = {}
+local throttlerIsInQueue = {}
+local exeId = 1
+local squeekyWheel
 
--- throttle a function call so that it is only allowed to execute once during a give time frame, ie once per second and a half
+-- throttle a function call so that it is only allowed to execute once during a give time frame, e.g. once every second and a half
 ---@param qId string a unique identifier to ensure the same func doesn't get queued more than once
 ---@param maxFreq number how often are we allowed to execute the function (in seconds, decimals allowed) ex 1.5
 ---@param func function the command to execute
 ---@param reportedElapsed number (optional) how long since this was last called (useful when the Bliz handlers provide ie, eg OnUpdate
+---@return boolean true if the func was executed immediately.  false if the func was postponed or simply thrown away because it's already in the q
 function throttle(qId, maxFreq, func, reportedElapsed)
+    --func(); if true then return end -- temporarily disable
 
-    -- temporarily disable
-    --func()
-    --if true then return end
+    -- enable only one caller to spit out debugging noise
+    if not squeekyWheel then
+        squeekyWheel = qId
+    end
+    local isSqueekyWheel = qId == squeekyWheel
 
-    if not throttleQ[qId] then
-        -- first time call
-        throttleQ[qId] = maxFreq
-        if not reportedElapsed then
-            throttleT0[qId] = time() -- set T0 to NOW!
-        end
-        -- always do the first call immediately
-        zebug.info:line(6,"TIMER FIRST", qId)
-        func()
+    local elapsed
+    local runNow
+    local previousTime = throttlerT0[qId]
+
+    if reportedElapsed then
+        elapsed = reportedElapsed
+    elseif previousTime then
+        elapsed = time() - previousTime
     else
-        -- subsequent calls
-        local elapsed = reportedElapsed or (time() - (throttleT0[qId] or 0))
-        if elapsed >= maxFreq then
-            zebug.info:line(6,"TIMER FOLLOWUP", qId, "elapsed",elapsed)
-            throttleT0[qId] = time() -- reset T0 to NOW!
-            func()
+        runNow = true
+    end
+
+    runNow = runNow or (elapsed >= maxFreq)
+
+    if runNow then
+        zebug.info:ifThen(isSqueekyWheel):out(3,"(`)", "t", time(), "Immediately EXECUTING", qId, "elapsed",elapsed)
+        doItNow(qId, func)
+        return true
+    else
+        -- do it later
+        -- but have we already queued an execution for later?
+        if throttlerIsInQueue[qId] then
+            zebug.trace:ifThen(isSqueekyWheel):out(3,"(`)", "t", time(), "Discarding", qId, "elapsed",elapsed)
+        else
+            throttlerIsInQueue[qId] = true
+            local runWhen = maxFreq - elapsed
+            local tScheduled = time()
+            local xId = exeId
+            exeId = exeId + 1
+            zebug.info:ifThen(isSqueekyWheel):out(3,"(`)", "t", time(), "Scheduling for later", qId, "elapsed",elapsed, "runWhen",runWhen, "xId",xId)
+            C_Timer.After(runWhen, function()
+                local prolapsed = time() - tScheduled
+                zebug.info:ifThen(isSqueekyWheel):name("throttle"):out(4,"(`)", "t", time(), "delayed EXECUTING", qId, "prolapsed", prolapsed, "tScheduled",tScheduled, "xId",xId)
+                doItNow(qId, func)
+            end)
         end
     end
+
+    return false
+end
+
+function doItNow(qId, func)
+    func()
+    throttlerT0[qId] = time() -- reset T0 to NOW!
+    throttlerIsInQueue[qId] = false
 end
 
 function getIdForCurrentToon()
