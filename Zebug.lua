@@ -27,6 +27,7 @@ local ADDON_NAME, ADDON_SYMBOL_TABLE = ...
 ---@field warn Zebug end user visible messages
 ---@field info Zebug dev dev messages
 ---@field trace Zebug tedious dev messages
+---@field sharedData table data that's common to the family of trace/info/warn/error instances
 
 ---@class ZebugLevel -- IntelliJ-EmmyLua annotation
 local OUTPUT = {
@@ -56,7 +57,7 @@ local ERR_MSG = "ZEBUGGER SYNTAX ERROR: invoke as zebug.info:func() not zebug.in
 local PREFIX = "<" .. ADDON_NAME .. ">"
 local DEFAULT_INDENT_CHAR = "#"
 local DEFAULT_INDENT_WIDTH = 0
-local DUMMY_INSTANCE
+local MUTE_INSTANCE
 
 local COLORS = { }
 COLORS[OUTPUT.TRACE] = GetClassColorObj("WARRIOR")
@@ -70,6 +71,7 @@ COLORS[OUTPUT.ERROR] = GetClassColorObj("DEATHKNIGHT")
 
 ---@class ZebuggersSharedData -- IntelliJ-EmmyLua annotation
 ---@field OUTPUT ZebugLevel -- IntelliJ-EmmyLua annotation
+---@field squeakyWheelId string the first of any number of unique IDs provided by individual callers
 local ZebuggersSharedData = { }
 
 ---@return ZebuggersSharedData -- IntelliJ-EmmyLua annotation
@@ -121,14 +123,14 @@ function Zebug:new(canSpeakOnlyIfThisLevel)
     zebugger.trace = newInstance(OUTPUT.TRACE, canSpeakOnlyIfThisLevel, sharedData)
     setmetatable(zebugger, { __index = zebugger.info }) -- support syntax such as zebug:out() that bahaves as debuf.info:out()
 
-    if not DUMMY_INSTANCE then
-        local dummy = function() return DUMMY_INSTANCE end
-        DUMMY_INSTANCE = newInstance(OUTPUT.TRACE, canSpeakOnlyIfThisLevel, sharedData)
-        DUMMY_INSTANCE.alert = dummy
-        DUMMY_INSTANCE.dump = dummy
-        DUMMY_INSTANCE.dumpy = dummy
-        DUMMY_INSTANCE.print = dummy
-        DUMMY_INSTANCE.line = dummy
+    if not MUTE_INSTANCE then
+        local silent = function() return MUTE_INSTANCE end
+        MUTE_INSTANCE = newInstance(OUTPUT.TRACE, canSpeakOnlyIfThisLevel, sharedData)
+        MUTE_INSTANCE.alert = silent
+        MUTE_INSTANCE.dump = silent
+        MUTE_INSTANCE.dumpy = silent
+        MUTE_INSTANCE.print = silent
+        MUTE_INSTANCE.line = silent
     end
 
     return zebugger
@@ -173,16 +175,40 @@ function Zebug:setMethodName(methodName)
     return self
 end
 
+Zebug.name = Zebug.setMethodName
+
+-- if the arg is false then it silences the rest of the zebug commands on the line
+-- usage: zebug.warn:ifThen(true):print("yadda")
 ---@return Zebug -- IntelliJ-EmmyLua annotation
 function Zebug:ifThen(conditional)
     if conditional then
         return self
     else
-        return DUMMY_INSTANCE
+        return MUTE_INSTANCE
     end
 end
 
-Zebug.name = Zebug.setMethodName
+-- for any given set of values provided for squeakyWheelId
+-- the first one is recorded and all others will be silenced.
+-- Useful for multiple instances of a class which otherwise
+-- would all be very noisy.  This filters out all but one.
+-- usage: zebug.warn:ifMe1st(self):print("yadda")
+--   or zebug.warn:ifMe1st(self:GetName()):print("yadda")
+---@return Zebug -- IntelliJ-EmmyLua annotation
+---@param squeakyWheelId string a unique identifier.  suggested: tostring(self)
+function Zebug:ifMe1st(squeakyWheelId)
+    if not self.sharedData.squeakyWheelId then
+        -- first one wins
+        self.sharedData.squeakyWheelId = squeakyWheelId
+        return self
+    end
+
+    if self.sharedData.squeakyWheelId == squeakyWheelId then
+        return self
+    else
+        return MUTE_INSTANCE
+    end
+end
 
 function Zebug:alert(msg)
     UIErrorsFrame:AddMessage(msg, 1.0, 0.1, 0.0)
