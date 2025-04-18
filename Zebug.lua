@@ -195,19 +195,23 @@ end
 -- usage: zebug.warn:ifMe1st(self):print("yadda")
 --   or zebug.warn:ifMe1st(self:GetName()):print("yadda")
 ---@return Zebug -- IntelliJ-EmmyLua annotation
----@param squeakyWheelId string a unique identifier.  suggested: tostring(self)
+---@param squeakyWheelId any a unique identifier, e.g. self or "ID123"
 function Zebug:ifMe1st(squeakyWheelId)
     if not self.sharedData.squeakyWheelId then
         -- first one wins
-        self.sharedData.squeakyWheelId = squeakyWheelId
+        self.sharedData.squeakyWheelId = getSqueakyWheelId(squeakyWheelId)
         return self
     end
 
-    if self.sharedData.squeakyWheelId == squeakyWheelId then
+    if self.sharedData.squeakyWheelId == getSqueakyWheelId(squeakyWheelId) then
         return self
     else
         return MUTE_INSTANCE
     end
+end
+
+function getSqueakyWheelId(obj)
+    return obj and ((obj.getLabel and obj:getLabel()) or (obj.getName and obj:getName())) or obj
 end
 
 function Zebug:alert(msg)
