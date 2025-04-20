@@ -195,15 +195,17 @@ end
 -- usage: zebug.warn:ifMe1st(self):print("yadda")
 --   or zebug.warn:ifMe1st(self:GetName()):print("yadda")
 ---@return Zebug -- IntelliJ-EmmyLua annotation
----@param squeakyWheelId any a unique identifier, e.g. self or "ID123"
-function Zebug:ifMe1st(squeakyWheelId)
+---@param caller any a unique identifier, e.g. self or "ID123"
+function Zebug:ifMe1st(caller)
+    self.mySqueakyWheelId = getSqueakyWheelId(caller)
+
     if not self.sharedData.squeakyWheelId then
         -- first one wins
-        self.sharedData.squeakyWheelId = getSqueakyWheelId(squeakyWheelId)
+        self.sharedData.squeakyWheelId = self.mySqueakyWheelId
         return self
     end
 
-    if self.sharedData.squeakyWheelId == getSqueakyWheelId(squeakyWheelId) then
+    if self.sharedData.squeakyWheelId == self.mySqueakyWheelId then
         return self
     else
         return MUTE_INSTANCE
@@ -347,8 +349,6 @@ function Zebug:identifyOutsideCaller()
     return file, n, funcName
 end
 
-
-
 ---@return Zebug -- IntelliJ-EmmyLua annotation
 function Zebug:setIndentChar(indentChar)
     self.sharedData.indentChar = indentChar
@@ -356,12 +356,13 @@ function Zebug:setIndentChar(indentChar)
 end
 
 function Zebug:getLabel()
+    local id = (self.mySqueakyWheelId and (" "..self.mySqueakyWheelId))
     local file, n, func = self:identifyOutsideCaller()
     local name = self.methodName or func
     name = (name and (name.."()~")) or "<ANON>"
     local lineNumber = (n and "["..n.."]") or ""
     self.methodName = nil
-    return (file and (file..":") or "") .. name .. lineNumber
+    return (file and (file..":") or "") .. name .. lineNumber .. (id or "")
 end
 
 local function getName(obj, default)
