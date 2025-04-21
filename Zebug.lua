@@ -213,7 +213,7 @@ function Zebug:ifMe1st(caller)
 end
 
 function getSqueakyWheelId(obj)
-    return obj and ((obj.getLabel and obj:getLabel()) or (obj.getName and obj:getName())) or obj
+    return obj and ((obj.getLabel and obj:getLabel()) or (obj.getName and obj:getName())) or tostring(obj)
 end
 
 function Zebug:alert(msg)
