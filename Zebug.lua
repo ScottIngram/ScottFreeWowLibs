@@ -48,6 +48,9 @@ local Zebug = {
 
 ADDON_SYMBOL_TABLE.Zebug = Zebug
 
+---@type table<string,Zebuggers>
+local namedZebuggers = {}
+
 -------------------------------------------------------------------------------
 -- Constants
 -------------------------------------------------------------------------------
@@ -139,6 +142,15 @@ end
 function Zebug:newZebuggers(...)
     local d = self:new(...)
     return d.trace, d.info, d.warn, d.error
+end
+
+-- lets different classes / files / etc to share a Zebugger.  Helpful for letting a tree of objects to share one ifMe1st() ID
+function Zebug:getSharedByName(name, ...)
+    if not namedZebuggers[name] then
+        namedZebuggers[name] = Zebug:new(...)
+    end
+
+    return namedZebuggers[name]
 end
 
 function Zebug:isMute()
