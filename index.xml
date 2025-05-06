@@ -9,6 +9,7 @@
     <Script file="constants.lua"/>
     <Script file="utilities.lua"/>
     <Script file="Throttler.lua"/>
+    <Script file="Pacifier.lua"/>
 
     <!-- ExportToGlobal.lua must be included last in your TOC after your code is all brought in but before your UI xml files that would use the globals -->
 </Ui>
