@@ -364,3 +364,51 @@ function vivify(matrix, first, ...)
     end
     return matrix
 end
+
+-- A bunch of type tests
+-- why? because I'm sick of accidentally typing
+-- type(obj) == string
+-- instead of
+-- type(obj) == "string"
+
+---@param obj unknown
+---@return boolean true if the provided obj is of type string
+function isString(obj)
+    return type(obj) == "string"
+end
+
+---@param obj unknown
+---@return boolean true if the provided obj is of type table
+function isTable(obj)
+    return type(obj) == "table"
+end
+
+---@param obj unknown
+---@return boolean true if the provided obj is of type number
+function isNumber(obj)
+    return type(obj) == "number"
+end
+
+---@param obj unknown
+---@return boolean true if the provided obj is of type function
+function isFunction(obj)
+    return type(obj) == "function"
+end
+
+---@param obj unknown
+---@return boolean true if the provided obj is of type boolean
+function isBoolean(obj)
+    return type(obj) == "boolean"
+end
+
+---@param obj any
+---@return boolean true if the provided obj is of type userdata
+function isUserdata(obj)
+    return type(obj) == "userdata"
+end
+
+---@param obj any
+---@return boolean true if the provided obj is of type nil
+function isNil(obj)
+    return type(obj) == "nil"
+end
