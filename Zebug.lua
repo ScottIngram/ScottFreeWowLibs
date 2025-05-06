@@ -57,7 +57,13 @@ local LEVEL = {
 ---@field ERROR ZebugLevel
 ---@field NONE ZebugLevel
 local Zebug = {
-    OUTPUT = OUTPUT
+    OUTPUT = LEVEL,
+    LEVEL = LEVEL,
+    TRACE = LEVEL.TRACE,
+    INFO  = LEVEL.INFO,
+    WARN  = LEVEL.WARN,
+    ERROR = LEVEL.ERROR,
+    NONE  = LEVEL.NONE,
 }
 
 ADDON_SYMBOL_TABLE.Zebug = Zebug
