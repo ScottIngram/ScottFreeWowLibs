@@ -30,7 +30,7 @@ local ADDON_NAME, ADDON_SYMBOL_TABLE = ...
 ---@field sharedData table data that's common to the family of trace/info/warn/error instances
 
 ---@class ZebugLevel -- IntelliJ-EmmyLua annotation
-local OUTPUT = {
+local LEVEL = {
     ALL_MSGS = 0,
     ALL   = 0,
     TRACE = 2,
@@ -41,7 +41,21 @@ local OUTPUT = {
 }
 
 ---@class Zebug -- IntelliJ-EmmyLua annotation
----@field OUTPUT ZebugLevel -- IntelliJ-EmmyLua annotation
+---@field isZebug boolean
+---@field level number
+---@field color table
+---@field myLevel boolean
+---@field canSpeakOnlyIfThisLevel boolean
+---@field indentWidth number
+---@field myLabel string
+---@field sharedData table
+---@field OUTPUT ZebugLevel
+---@field LEVEL ZebugLevel
+---@field TRACE ZebugLevel
+---@field INFO ZebugLevel
+---@field WARN ZebugLevel
+---@field ERROR ZebugLevel
+---@field NONE ZebugLevel
 local Zebug = {
     OUTPUT = OUTPUT
 }
@@ -55,7 +69,7 @@ local namedZebuggers = {}
 -- Constants
 -------------------------------------------------------------------------------
 
-local DEFAULT_ZEBUG = OUTPUT.WARN
+local DEFAULT_ZEBUG = LEVEL.WARN
 local ERR_MSG = "ZEBUGGER SYNTAX ERROR: invoke as zebug.info:func() not zebug.info.func()"
 local PREFIX = "<" .. ADDON_NAME .. ">"
 local DEFAULT_INDENT_CHAR = "#"
@@ -63,10 +77,10 @@ local DEFAULT_INDENT_WIDTH = 0
 local MUTE_INSTANCE
 
 local COLORS = { }
-COLORS[OUTPUT.TRACE] = GetClassColorObj("WARRIOR")
-COLORS[OUTPUT.INFO]  = GetClassColorObj("MONK")
-COLORS[OUTPUT.WARN]  = GetClassColorObj("ROGUE")
-COLORS[OUTPUT.ERROR] = GetClassColorObj("DEATHKNIGHT")
+COLORS[LEVEL.TRACE] = GetClassColorObj("WARRIOR")
+COLORS[LEVEL.INFO]  = GetClassColorObj("MONK")
+COLORS[LEVEL.WARN]  = GetClassColorObj("ROGUE")
+COLORS[LEVEL.ERROR] = GetClassColorObj("DEATHKNIGHT")
 
 -------------------------------------------------------------------------------
 -- Inner Class - ZebuggersSharedData
@@ -96,8 +110,9 @@ local function isZebuggerObj(zelf)
 end
 
 ---@param myLevel ZebugLevel
+---@return Zebug
 local function newInstance(myLevel, canSpeakOnlyIfThisLevel, sharedData)
-    local isSilent = myLevel < canSpeakOnlyIfThisLevel
+    ---@type Zebug
     local self = {
         isZebug = true,
         level = myLevel,
@@ -119,16 +134,17 @@ function Zebug:new(canSpeakOnlyIfThisLevel)
     assert(isValidNoiseLevel, ADDON_NAME..": Zebugger:newZebugger() Invalid Noise Level: '".. tostring(canSpeakOnlyIfThisLevel) .."'")
 
     local sharedData = ZebuggersSharedData:new()
-    local zebugger = { }
-    zebugger.error = newInstance(OUTPUT.ERROR, canSpeakOnlyIfThisLevel, sharedData)
-    zebugger.warn  = newInstance(OUTPUT.WARN,  canSpeakOnlyIfThisLevel, sharedData)
-    zebugger.info  = newInstance(OUTPUT.INFO,  canSpeakOnlyIfThisLevel, sharedData)
-    zebugger.trace = newInstance(OUTPUT.TRACE, canSpeakOnlyIfThisLevel, sharedData)
+    local zebugger = Zebuggers:new()
+    zebugger.originalNoiseLevel = canSpeakOnlyIfThisLevel
+    zebugger.error = newInstance(LEVEL.ERROR, canSpeakOnlyIfThisLevel, sharedData)
+    zebugger.warn  = newInstance(LEVEL.WARN,  canSpeakOnlyIfThisLevel, sharedData)
+    zebugger.info  = newInstance(LEVEL.INFO,  canSpeakOnlyIfThisLevel, sharedData)
+    zebugger.trace = newInstance(LEVEL.TRACE, canSpeakOnlyIfThisLevel, sharedData)
     setmetatable(zebugger, { __index = zebugger.info }) -- support syntax such as zebug:out() that bahaves as debuf.info:out()
 
     if not MUTE_INSTANCE then
         local silent = function() return MUTE_INSTANCE end
-        MUTE_INSTANCE = newInstance(OUTPUT.TRACE, canSpeakOnlyIfThisLevel, sharedData)
+        MUTE_INSTANCE = newInstance(LEVEL.TRACE, canSpeakOnlyIfThisLevel, sharedData)
         MUTE_INSTANCE.alert = silent
         MUTE_INSTANCE.dump = silent
         MUTE_INSTANCE.dumpy = silent
@@ -244,7 +260,7 @@ local UP_ARROW   = "`````^^^^^AAAAA^^^^^`````"
 ---@return Zebug -- IntelliJ-EmmyLua annotation
 function Zebug:dumpy(label, ...)
     assert(isZebuggerObj(self), ERR_MSG)
-    if self.isSilent then return end
+    if self:isMute() then return end
     self:out(2,DOWN_ARROW, label, DOWN_ARROW)
     DevTools_Dump(...)
     self:out(2,UP_ARROW, label, UP_ARROW)
@@ -254,7 +270,7 @@ end
 ---@return Zebug -- IntelliJ-EmmyLua annotation
 function Zebug:print(...)
     assert(isZebuggerObj(self), ERR_MSG)
-    if self.isSilent then return end
+    if self:isMute() then return end
     --if not self.caller then self.caller = getfenv(2) end
 
     self:line(self.sharedData.indentWidth, ...)
@@ -263,10 +279,11 @@ function Zebug:print(...)
     return self
 end
 
----@return Zebug -- IntelliJ-EmmyLua annotation
+---@return Zebug
+---@param indentWidth number how many characters wide is the header
 function Zebug:line(indentWidth, ...)
     assert(isZebuggerObj(self), ERR_MSG)
-    if self.isSilent then return end
+    if self:isMute() then return end
     --if not self.caller then self.caller = getfenv(2) end
 
     self:out(indentWidth, self.sharedData.indentChar, ...)
@@ -275,10 +292,12 @@ function Zebug:line(indentWidth, ...)
     return self
 end
 
----@return Zebug -- IntelliJ-EmmyLua annotation
+---@return Zebug
+---@param indentWidth number how many characters wide is the header
+---@param indentChar string will be used to compose the header
 function Zebug:out(indentWidth, indentChar, ...)
     assert(isZebuggerObj(self), ERR_MSG)
-    if self.isSilent then return end
+    if self:isMute() then return end
     --if not self.caller then self.caller = getfenv(2) end
 
     --print("Zebug:out() calledBy-->", debugstack(2,4,0) )
@@ -287,8 +306,8 @@ function Zebug:out(indentWidth, indentChar, ...)
     local indent = string.rep(indentChar or DEFAULT_INDENT_CHAR, indentWidth or DEFAULT_INDENT_WIDTH)
     local args = table.pack(...)
     local d = self.sharedData
-    local label = self:getLabel()
-    local out = { self:startColor(), indent, " ", label or "", " ", self:stopColor() }
+    local header = self:getHeader()
+    local out = { self:startColor(), indent, " ", header or "", " ", self:stopColor() }
     for i=1,args.n do
         local v = args[i]
         local isOdd = i%2 == 1
@@ -367,8 +386,10 @@ function Zebug:setIndentChar(indentChar)
     return self
 end
 
-function Zebug:getLabel()
-    local id = (self.mySqueakyWheelId and (" "..self.mySqueakyWheelId))
+function Zebug:getHeader()
+    local id = self.mySqueakyWheelId or self.myLabel
+    id = (id and (" "..id))
+    local label = (self.myLabel and (" "..self.myLabel))
     local file, n, func = self:identifyOutsideCaller()
     local name = self.methodName or func
     name = (name and (name.."()~")) or "<ANON>"
@@ -388,7 +409,7 @@ end
 function Zebug:messengerForEvent(eventName, msg)
     assert(isZebuggerObj(self), ERR_MSG)
     return function(obj)
-        if self.isSilent then return end
+        if self:isMute() then return end
         self:print(getName(obj,eventName).." said ".. msg .."! ")
     end
 end
@@ -403,13 +424,13 @@ end
 
 function Zebug:run(callback)
     assert(isZebuggerObj(self), ERR_MSG)
-    if self.isSilent then return end
+    if self:isMute() then return end
     callback()
 end
 
 function Zebug:dumpKeys(object)
     assert(isZebuggerObj(self), ERR_MSG)
-    if self.isSilent then return end
+    if self:isMute() then return end
     if not object then
         self:print("NiL")
         return
