@@ -12,6 +12,8 @@ local zebug = Zebug:new(Zebug.OUTPUT.WARN)
 ---@class BlizGlobalEventsListener
 BlizGlobalEventsListener = {}
 
+local counter = {}
+
 -------------------------------------------------------------------------------
 -- Event Handler Registration
 -------------------------------------------------------------------------------
@@ -22,7 +24,20 @@ BlizGlobalEventsListener = {}
 -- Note: addons that load before yours will not be handled.  Use C_AddOns.IsAddOnLoaded(addonName) instead
 function BlizGlobalEventsListener:register(zelf, eventHandlers, addonLoadedHandlers)
     local dispatcher = function(listenerFrame, eventName, ...)
-        eventHandlers[eventName](zelf, ...)
+        if not counter[eventName] then
+            counter[eventName] = 1
+        else
+            counter[eventName] = counter[eventName] + 1
+        end
+
+        -- pass the counter as the last arg
+        if select("#", ...) == 0 then
+            -- no args were passed in from the Bliz event, so don't include "..."
+            eventHandlers[eventName](zelf, eventName, counter[eventName])
+        else
+            -- pass along the args provided by the Bliz event as "..."
+            eventHandlers[eventName](zelf, ..., eventName, counter[eventName])
+        end
     end
 
     local eventListenerFrame = CreateFrame(FrameType.FRAME, ADDON_NAME.."BlizGlobalEventsListener")
