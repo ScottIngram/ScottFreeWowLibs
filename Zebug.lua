@@ -27,7 +27,9 @@ local ADDON_NAME, ADDON_SYMBOL_TABLE = ...
 ---@field warn Zebug end user visible messages
 ---@field info Zebug dev dev messages
 ---@field trace Zebug tedious dev messages
+---@field originalNoiseLevel ZebugLevel set upon creation in new()
 ---@field sharedData table data that's common to the family of trace/info/warn/error instances
+local Zebuggers = {}
 
 ---@class ZebugLevel -- IntelliJ-EmmyLua annotation
 local LEVEL = {
@@ -108,6 +110,43 @@ function ZebuggersSharedData:new()
 end
 
 -------------------------------------------------------------------------------
+-- Class Zebuggers - Functions / Methods
+-------------------------------------------------------------------------------
+
+local function deepcopy(src, target)
+    local orig_type = type(src)
+    local copy
+    if orig_type == 'table' then
+        copy = target or {}
+        for orig_key, orig_value in next, src, nil do
+            copy[deepcopy(orig_key)] = deepcopy(orig_value)
+        end
+    else -- number, string, boolean, etc
+        copy = src
+    end
+    return copy
+end
+
+function Zebuggers:new()
+    return deepcopy(Zebuggers, {})
+end
+
+---@param level ZebugLevel the level at which zebug lines are allowed to produce output.  anything below that level is mute.
+function Zebuggers:setNoiseLevel(level)
+    self.trace:setNoiseLevel(level)
+    self.info:setNoiseLevel(level)
+    self.warn:setNoiseLevel(level)
+    self.error:setNoiseLevel(level)
+end
+
+function Zebuggers:setNoiseLevelBackToOriginal()
+    self.trace:setNoiseLevel(self.originalNoiseLevel)
+    self.info:setNoiseLevel(self.originalNoiseLevel)
+    self.warn:setNoiseLevel(self.originalNoiseLevel)
+    self.error:setNoiseLevel(self.originalNoiseLevel)
+end
+
+-------------------------------------------------------------------------------
 -- Class Zebug - Functions / Methods
 -------------------------------------------------------------------------------
 
@@ -123,7 +162,8 @@ local function newInstance(myLevel, canSpeakOnlyIfThisLevel, sharedData)
         isZebug = true,
         level = myLevel,
         color = COLORS[myLevel],
-        isSilent = isSilent,
+        myLevel = myLevel,
+        canSpeakOnlyIfThisLevel = canSpeakOnlyIfThisLevel,
         indentWidth = 5,
         sharedData = sharedData,
     }
@@ -175,14 +215,20 @@ function Zebug:getSharedByName(name, ...)
     return namedZebuggers[name]
 end
 
+---@param level ZebugLevel
+function Zebug:setNoiseLevel(level)
+    assert(isZebuggerObj(self), ERR_MSG)
+    self.canSpeakOnlyIfThisLevel = level
+end
+
 function Zebug:isMute()
     assert(isZebuggerObj(self), ERR_MSG)
-    return self.isSilent
+    return self.myLevel < self.canSpeakOnlyIfThisLevel
 end
 
 function Zebug:isActive()
     assert(isZebuggerObj(self), ERR_MSG)
-    return not self.isSilent
+    return not self:isMute()
 end
 
 function Zebug:colorize(str)
@@ -222,6 +268,12 @@ function Zebug:ifThen(conditional)
     end
 end
 
+---@param caller any a unique identifier, e.g. self or "ID123"
+function Zebug:label(caller)
+    self.myLabel = getSqueakyWheelId(caller)
+    return self
+end
+
 -- for any given set of values provided for squeakyWheelId
 -- the first one is recorded and all others will be silenced.
 -- Useful for multiple instances of a class which otherwise
@@ -247,7 +299,12 @@ function Zebug:ifMe1st(caller)
 end
 
 function getSqueakyWheelId(obj)
-    return obj and ((obj.getLabel and obj:getLabel()) or (obj.getName and obj:getName())) or tostring(obj)
+    return obj and (
+        (type(obj)=="string" and obj)
+        or (obj.getLabel and obj:getLabel())
+        or (obj.getName and obj:getName())
+        or tostring(obj)
+    ) or "nil"
 end
 
 function Zebug:alert(msg)
@@ -332,6 +389,8 @@ function Zebug:out(indentWidth, indentChar, ...)
     print(self:colorize(PREFIX), str)
 
     self.caller = nil
+    self.myLabel = nil
+    self.mySqueakyWheelId = nil
     return self
 end
 
