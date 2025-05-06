@@ -341,4 +341,26 @@ function assertIsMethodOf(firstArg, class)
     assert(isClass(firstArg, class), ADDON_NAME..": Um... it's var:foo() not var.foo()")
 end
 
+---@param zelf table instance with the method to be overridden
+---@param funcName string name of the method to be overridden
+---@param newFunc function reference to the replacement
+---@return function the original method so it can be invoked by the new one
+function override(zelf, funcName, newFunc)
+    local originalFunc = zelf[funcName]
+    zelf[funcName] = newFunc
+    return originalFunc
+end
 
+-- ensure the data structure is ready to store values at the given coordinates
+---@param matrix table potentially empty but needs to be multi-dimensional
+---@param first any key at the top of the tree.  Each subsequent arg in "..." will be a key naming a lower branch in the tree
+---@return table the matrix table but now with a tree guaranteed to have at least one limb with each child branch named for the incoming args
+function vivify(matrix, first, ...)
+    if first then
+        if not matrix[first] then
+            matrix[first] = {}
+        end
+        vivify(matrix[first], select(1, ...))
+    end
+    return matrix
+end
