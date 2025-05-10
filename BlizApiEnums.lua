@@ -6,6 +6,29 @@
 local ADDON_NAME, ADDON_SYMBOL_TABLE = ...
 ADDON_SYMBOL_TABLE.Wormhole() -- Lua voodoo magic that replaces the current Global namespace with the Ufo
 
+---@class RaidMarker
+RaidMarker = {
+    STAR     = "STAR",
+    CIRCLE   = "CIRCLE",
+    DIAMOND  = "DIAMOND",
+    TRIANGLE = "TRIANGLE",
+    MOON     = "MOON",
+    SQUARE   = "SQUARE",
+    CROSS    = "CROSS",
+    SKULL    = "SKULL",
+}
+
+RaidMarkerTexture = {
+    [RaidMarker.STAR    ] = ICON_LIST[1].. "0|t", -- why?!?!?!  fuck you yet again, Bliz
+    [RaidMarker.CIRCLE  ] = ICON_LIST[2].. "0|t",
+    [RaidMarker.DIAMOND ] = ICON_LIST[3].. "0|t",
+    [RaidMarker.TRIANGLE] = ICON_LIST[4].. "0|t",
+    [RaidMarker.MOON    ] = ICON_LIST[5].. "0|t",
+    [RaidMarker.SQUARE  ] = ICON_LIST[6].. "0|t",
+    [RaidMarker.CROSS   ] = ICON_LIST[7].. "0|t",
+    [RaidMarker.SKULL   ] = ICON_LIST[8].. "0|t",
+}
+
 ---@class MouseClick
 MouseClick = {
     ANY    = "any",

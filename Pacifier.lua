@@ -39,21 +39,21 @@ function Pacifier:pacify(class, funcName)
         if isInCombatLockdownQuiet(label) then
             callCounter = callCounter + 1
             local takeUhNumber = callCounter
-            zebug.trace:label(label):out(3, div, "IN COMBAT... delaying. callCounter",callCounter, "takeUhNumber",takeUhNumber)
+            zebug.trace:owner(label):out(3, div, "IN COMBAT... delaying. callCounter",callCounter, "takeUhNumber",takeUhNumber)
 
             -- FUNC START
             C_Timer.After(MAX_FREQUENCY, function()
                 if takeUhNumber == callCounter then
                     -- invoke the original function and pass in the "..." from the "wrapped" call, not the C_Timer call
-                    zebug.trace:label(label):out(3, div, "IN COMBAT... delaying AGAIN. callCounter",callCounter, "takeUhNumber",takeUhNumber)
+                    zebug.trace:owner(label):out(3, div, "IN COMBAT... delaying AGAIN. callCounter",callCounter, "takeUhNumber",takeUhNumber)
                     wrapped(a,b,c,d,e)
                 else
-                    zebug.trace:label(label):out(3, div, "limbo... DISCARD OLD CALL! callCounter",callCounter, "takeUhNumber",takeUhNumber)
+                    zebug.trace:owner(label):out(3, div, "limbo... DISCARD OLD CALL! callCounter",callCounter, "takeUhNumber",takeUhNumber)
                 end
             end)
             -- FUNC END
         else
-            zebug.trace:label(label):out(3, div, "no combat... executing. callCounter",callCounter)
+            zebug.trace:owner(label):out(3, div, "no combat... executing. callCounter",callCounter)
             func(a,b,c,d,e)
         end
     end

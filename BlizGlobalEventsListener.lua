@@ -36,6 +36,7 @@ function BlizGlobalEventsListener:register(zelf, eventHandlers, addonLoadedHandl
             eventHandlers[eventName](zelf, eventName, counter[eventName])
         else
             -- pass along the args provided by the Bliz event as "..."
+            --print("---> eventName",eventName, "counter",counter[eventName])
             eventHandlers[eventName](zelf, ..., eventName, counter[eventName])
         end
     end

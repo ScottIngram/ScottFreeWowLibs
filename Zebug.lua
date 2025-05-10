@@ -15,12 +15,19 @@
 -- zebug:setMethodName("DoMeNow"):print("foo", bar)
 -- During development, you may want to silence some levels that are not currently of interest, so change the arg to WARN or ERROR
 -- When you release your addon and want to silence even more levels, use NONE
+--
+-- TODO: zebug:wrapAllMethods(MyClassFoo) - wraps all of a class' methods. the wrapper provides a zebugger pre-populated with its
+-- method name, call stack depth (to be used with auto-indentation), etc?
+-- and can assign individual methods with custom noiseLevels based on some class config = { getFoo = INFO, setBar = TRACE, default = WARN }
 
 local ADDON_NAME, ADDON_SYMBOL_TABLE = ...
 
 -------------------------------------------------------------------------------
 -- Module Loading / Exporting
 -------------------------------------------------------------------------------
+
+local RaidMarker = ADDON_SYMBOL_TABLE.RaidMarker -- import from BlizApiEnums
+local RaidMarkerTexture = ADDON_SYMBOL_TABLE.RaidMarkerTexture -- import from BlizApiEnums
 
 ---@class Zebuggers -- IntelliJ-EmmyLua annotation
 ---@field error Zebug always shown, highest priority messages
@@ -41,15 +48,83 @@ local LEVEL = {
     ERROR = 8,
     NONE  = 10,
 }
+local LEVEL_NAMES = {
+    [LEVEL.TRACE] = "TRACE",
+    [LEVEL.INFO]  = "INFO ",
+    [LEVEL.WARN]  = "WARN ",
+    [LEVEL.ERROR] = "ERROR",
+}
 
+---@class Event
+---@field color table Bliz color object
+---@field colorOpener string the character sequence required to print in a color
+---@field indent number
+---@field count number
+---@field name string
+---@field owner any the class/object responsible for deploying the event
+---@field noiseLevel ZebugLevel
+
+---@type Event
+local Event = {}
+local eCounter = {}
+
+---@return Event
+function Event:new(owner, name, count, indent, noiseLevel)
+    if not count then
+        if not eCounter[name] then
+            eCounter[name] = 1
+        else
+            eCounter[name] = eCounter[name] + 1
+        end
+        count = eCounter[name]
+    end
+
+    local c, co = getNextColor()
+
+    ---@type Event
+    local self = {
+        owner=owner,
+        name=name,
+        count=count,
+        indent=indent,
+        noiseLevel=noiseLevel,
+        color = c,
+        colorOpener = co,
+        getFullName=Event.getFullName,
+        toString=Event.toString,
+    }
+
+    ADDON_SYMBOL_TABLE.UfoMixIn.installMyToString(self)
+
+    return self
+end
+
+function Event:getFullName()
+    if not self.fullName then
+        self.fullName = ((self.owner and getNickName(self.owner) .." / ") or "") .. self.name .. "_" .. self.count
+    end
+    return self.fullName
+end
+
+function Event:toString()
+    return self:getFullName()
+end
+
+
+ADDON_SYMBOL_TABLE.Event = Event
+
+---@class Zebug -- IntelliJ-EmmyLua annotation
 ---@class Zebug -- IntelliJ-EmmyLua annotation
 ---@field isZebug boolean
 ---@field level number
 ---@field color table
----@field myLevel boolean
+---@field myLevel ZebugLevel
 ---@field canSpeakOnlyIfThisLevel boolean
 ---@field indentWidth number
----@field myLabel string
+---@field zEvent Event
+---@field zEventMsg string
+---@field zLabel string
+---@field markers table<RaidMarker, boolean>
 ---@field sharedData table
 ---@field OUTPUT ZebugLevel
 ---@field LEVEL ZebugLevel
@@ -90,6 +165,28 @@ COLORS[LEVEL.INFO]  = GetClassColorObj("MONK")
 COLORS[LEVEL.WARN]  = GetClassColorObj("ROGUE")
 COLORS[LEVEL.ERROR] = GetClassColorObj("DEATHKNIGHT")
 
+local CLASSES = {"HUNTER", "WARLOCK", --[["PRIEST",]] "PALADIN", "MAGE", "ROGUE", "DRUID", "SHAMAN", "WARRIOR", "DEATHKNIGHT", "MONK", "DEMONHUNTER", "EVOKER"};
+local maxColor = #CLASSES
+local COLORZ
+local COLOR_OPENER
+local colorCount = 1
+function getNextColor()
+    if not COLORZ then
+        COLORZ = {}
+        COLOR_OPENER = {}
+        for i, c in ipairs(CLASSES) do
+            COLORZ[i] = GetClassColorObj(c)
+            COLOR_OPENER[i] = COLORZ[i]:WrapTextInColorCode(""):sub(1,-3)
+            --print(COLORZ[i]:WrapTextInColorCode(c))
+        end
+    end
+    if colorCount > maxColor then
+        colorCount = 1
+    else
+        colorCount = colorCount + 1
+    end
+    return COLORZ[colorCount], COLOR_OPENER[colorCount]
+end
 -------------------------------------------------------------------------------
 -- Inner Class - ZebuggersSharedData
 -------------------------------------------------------------------------------
@@ -171,6 +268,15 @@ local function newInstance(myLevel, canSpeakOnlyIfThisLevel, sharedData)
     return self
 end
 
+function Zebug:runEvent(event, funcToWrap)
+    local width = event.indent or 20
+    local x = self.markers -- remember these for later
+    self:event(event, ADDON_SYMBOL_TABLE.START):out(width, "=",ADDON_SYMBOL_TABLE.START)
+    funcToWrap()
+    self.markers = x -- put them back coz they get cleared on every output
+    self:event(event, ADDON_SYMBOL_TABLE.END):out(width, "=",ADDON_SYMBOL_TABLE.END)
+end
+
 ---@return Zebuggers -- IntelliJ-EmmyLua annotation
 function Zebug:new(canSpeakOnlyIfThisLevel)
     if not canSpeakOnlyIfThisLevel then
@@ -249,6 +355,53 @@ function Zebug:stopColor()
     return "|r"
 end
 
+-- set a raid marker = STAR
+function Zebug:mStar(condition)
+    return self:mark(RaidMarker.STAR, condition)
+end
+
+function Zebug:mCircle(condition)
+    return self:mark(RaidMarker.CIRCLE, condition)
+end
+
+function Zebug:mDiamond(condition)
+    return self:mark(RaidMarker.DIAMOND, condition)
+end
+
+function Zebug:mTriangle(condition)
+    return self:mark(RaidMarker.TRIANGLE, condition)
+end
+
+function Zebug:mMoon(condition)
+    return self:mark(RaidMarker.MOON, condition)
+end
+
+function Zebug:mSquare(condition)
+    return self:mark(RaidMarker.SQUARE, condition)
+end
+
+function Zebug:mCross(condition)
+    return self:mark(RaidMarker.CROSS, condition)
+end
+
+function Zebug:mSkull(condition)
+    return self:mark(RaidMarker.SKULL, condition)
+end
+
+-- TODO - others? just various icons?
+
+function Zebug:mark(marker, condition)
+    local doIt = true -- in the absence of a boolean conditional, default to YES
+    if condition and (type(condition) == "boolean") then
+        doIt = condition
+    end
+    if not self.markers then
+        self.markers = {}
+    end
+    self.markers[marker] = doIt and RaidMarkerTexture[marker]
+    return self
+end
+
 ---@return Zebug -- IntelliJ-EmmyLua annotation
 function Zebug:setMethodName(methodName)
     self.methodName = methodName
@@ -268,9 +421,19 @@ function Zebug:ifThen(conditional)
     end
 end
 
+---@param event Event
+function Zebug:event(event, msg)
+    assert(event,"can't set nil event!") -- TODO: replace with event = event or UNKNOWN_EVENT
+    --assert(ADDON_SYMBOL_TABLE.isTable(event),"event obj must be a table!")
+    --assert(event.getFullName,"provided param is not actually an Event object!")
+    self.zEvent = event
+    self.zEventMsg = msg
+    return self
+end
+
 ---@param caller any a unique identifier, e.g. self or "ID123"
-function Zebug:label(caller)
-    self.myLabel = getSqueakyWheelId(caller)
+function Zebug:owner(caller)
+    self.zLabel = getNickName(caller)
     return self
 end
 
@@ -283,7 +446,7 @@ end
 ---@return Zebug -- IntelliJ-EmmyLua annotation
 ---@param caller any a unique identifier, e.g. self or "ID123"
 function Zebug:ifMe1st(caller)
-    self.mySqueakyWheelId = getSqueakyWheelId(caller)
+    self.mySqueakyWheelId = getNickName(caller)
 
     if not self.sharedData.squeakyWheelId then
         -- first one wins
@@ -298,11 +461,12 @@ function Zebug:ifMe1st(caller)
     end
 end
 
-function getSqueakyWheelId(obj)
+function getNickName(obj)
     return obj and (
         (type(obj)=="string" and obj)
         or (obj.getLabel and obj:getLabel())
         or (obj.getName and obj:getName())
+        or obj.ufoType
         or tostring(obj)
     ) or "nil"
 end
@@ -369,8 +533,61 @@ function Zebug:out(indentWidth, indentChar, ...)
     local indent = string.rep(indentChar or DEFAULT_INDENT_CHAR, indentWidth or DEFAULT_INDENT_WIDTH)
     local args = table.pack(...)
     local d = self.sharedData
-    local header = self:getHeader()
-    local out = { self:startColor(), indent, " ", header or "", " ", self:stopColor() }
+    --local header = self:OLD_getHeader()
+
+    -- <UFO> {rt1}============================== Ufo/1_PLAYER_ENTERING_WORLDUFO?()~[50] END!
+    -- <UFO> {rt1} ============================== Ufo/PLAYER_ENTERING_WORLD_1 UFO()~[50] END!
+
+    local file, method, line, eventName, eMsg, owner = self:getHeader()
+    local levelMsg = LEVEL_NAMES[self.myLevel]
+
+    local out = {
+        self:colorize(PREFIX),
+        " ",
+
+        self.markers and self.markers[RaidMarker.STAR] or "",
+        self.markers and self.markers[RaidMarker.CIRCLE] or "",
+        self.markers and self.markers[RaidMarker.DIAMOND] or "",
+        self.markers and self.markers[RaidMarker.TRIANGLE] or "",
+        self.markers and self.markers[RaidMarker.MOON] or "",
+        self.markers and self.markers[RaidMarker.SQUARE] or "",
+        self.markers and self.markers[RaidMarker.CROSS] or "",
+        self.markers and self.markers[RaidMarker.SKULL] or "",
+        ADDON_SYMBOL_TABLE.isTableNotEmpty(self.markers) and " " or "",
+
+        eventName and self.zEvent.colorOpener or "", -- start event color
+        eventName and "[" or "",
+        eventName or "",
+        eventName and (eMsg and " <-- " or "") or "",
+        eventName and eMsg or "",
+        eventName and "] " or "",
+
+        indent,
+        " ",
+        --header or "",
+
+        file,
+
+        method and ":" or "",
+        method,
+
+        line,
+        eventName and "|r" or "", -- end event color
+
+        owner and "",
+        owner,
+
+        self:stopColor(), -- end event color
+
+        self:startColor(), -- start debug level color
+        levelMsg and " " or "",
+        levelMsg or "",
+        self:stopColor(),  -- end debug level color
+
+        " ",
+    }
+
+    -- assemble the remaining args as "label:value, "
     for i=1,args.n do
         local v = args[i]
         local isOdd = i%2 == 1
@@ -385,11 +602,17 @@ function Zebug:out(indentWidth, indentChar, ...)
             end
         end
     end
-    local str = table.concat(out,"")
-    print(self:colorize(PREFIX), str)
 
+    print(table.concat(out,""))
+
+    if ADDON_SYMBOL_TABLE.isTableNotEmpty(self.markers) then
+        self.markers = nil
+    end
     self.caller = nil
-    self.myLabel = nil
+    self.zLabel = nil
+    self.zEvent = nil
+    self.zEventMsg = nil
+    self.methodName = nil
     self.mySqueakyWheelId = nil
     return self
 end
@@ -452,15 +675,18 @@ function Zebug:setIndentChar(indentChar)
 end
 
 function Zebug:getHeader()
-    local id = self.mySqueakyWheelId or self.myLabel
-    id = (id and (" "..id))
-    local label = (self.myLabel and (" "..self.myLabel))
-    local file, n, func = self:identifyOutsideCaller()
-    local name = self.methodName or func
-    name = (name and (name.."()~")) or "<ANON>"
-    local lineNumber = (n and "["..n.."]") or ""
-    self.methodName = nil
-    return (file and (file..":") or "") .. name .. lineNumber .. (id or "")
+    local file, n, funcName = self:identifyOutsideCaller()
+    if funcName == "?" then
+        funcName = nil
+    end
+    local methodName = self.methodName or funcName or "<ANON>"
+
+    return
+        --[[file]]   file or "",
+        --[[method]] methodName and (methodName .."()") or "",
+        --[[line]]   (n and "~["..n.."]") or "",
+        --[[event]]  (self.zEvent and (self.zEvent.getFullName and self.zEvent:getFullName()) or self.zEvent), --[[eventMsg]] self.zEventMsg,
+        --[[owner]]  self.mySqueakyWheelId or self.zLabel or ""
 end
 
 local function getName(obj, default)

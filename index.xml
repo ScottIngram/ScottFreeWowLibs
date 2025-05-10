@@ -3,10 +3,10 @@
     xsi:schemaLocation="http://www.blizzard.com/wow/ui/..\FrameXML\UI.xsd"
 >
     <Script file="Wormhole.lua"/>
-    <Script file="Zebug.lua"/>
-    <Script file="BlizApiEnums.lua"/>
-    <Script file="BlizGlobalEventsListener.lua"/>
     <Script file="constants.lua"/>
+    <Script file="BlizApiEnums.lua"/>
+    <Script file="Zebug.lua"/>
+    <Script file="BlizGlobalEventsListener.lua"/>
     <Script file="utilities.lua"/>
     <Script file="Throttler.lua"/>
     <Script file="Pacifier.lua"/>
