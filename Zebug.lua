@@ -69,7 +69,7 @@ local Event = {}
 local eCounter = {}
 
 ---@return Event
-function Event:new(owner, name, count, indent, noiseLevel)
+function Event:new(owner, name, count, noiseLevel, indent)
     if not count then
         if not eCounter[name] then
             eCounter[name] = 1
@@ -114,7 +114,6 @@ end
 ADDON_SYMBOL_TABLE.Event = Event
 
 ---@class Zebug -- IntelliJ-EmmyLua annotation
----@class Zebug -- IntelliJ-EmmyLua annotation
 ---@field isZebug boolean
 ---@field level number
 ---@field color table
@@ -123,7 +122,7 @@ ADDON_SYMBOL_TABLE.Event = Event
 ---@field indentWidth number
 ---@field zEvent Event
 ---@field zEventMsg string
----@field zLabel string
+---@field zOwner string
 ---@field markers table<RaidMarker, boolean>
 ---@field sharedData table
 ---@field OUTPUT ZebugLevel
@@ -180,11 +179,12 @@ function getNextColor()
             --print(COLORZ[i]:WrapTextInColorCode(c))
         end
     end
-    if colorCount > maxColor then
+    if colorCount == maxColor then
         colorCount = 1
     else
         colorCount = colorCount + 1
     end
+    --print(colorCount, COLORZ[colorCount]:WrapTextInColorCode(CLASSES[colorCount]))
     return COLORZ[colorCount], COLOR_OPENER[colorCount]
 end
 -------------------------------------------------------------------------------
@@ -224,6 +224,7 @@ local function deepcopy(src, target)
     return copy
 end
 
+---@return Zebuggers
 function Zebuggers:new()
     return deepcopy(Zebuggers, {})
 end
@@ -242,6 +243,11 @@ function Zebuggers:setNoiseLevelBackToOriginal()
     self.warn:setNoiseLevel(self.originalNoiseLevel)
     self.error:setNoiseLevel(self.originalNoiseLevel)
 end
+
+function Zebuggers:getNoiseLevel()
+    return self.originalNoiseLevel
+end
+
 
 -------------------------------------------------------------------------------
 -- Class Zebug - Functions / Methods
@@ -268,11 +274,11 @@ local function newInstance(myLevel, canSpeakOnlyIfThisLevel, sharedData)
     return self
 end
 
-function Zebug:runEvent(event, funcToWrap)
+function Zebug:runEvent(event, runEvent)
     local width = event.indent or 20
     local x = self.markers -- remember these for later
     self:event(event, ADDON_SYMBOL_TABLE.START):out(width, "=",ADDON_SYMBOL_TABLE.START)
-    funcToWrap()
+    runEvent()
     self.markers = x -- put them back coz they get cleared on every output
     self:event(event, ADDON_SYMBOL_TABLE.END):out(width, "=",ADDON_SYMBOL_TABLE.END)
 end
@@ -329,7 +335,8 @@ end
 
 function Zebug:isMute()
     assert(isZebuggerObj(self), ERR_MSG)
-    return self.myLevel < self.canSpeakOnlyIfThisLevel
+    local effectiveLevel = (self.zEvent and self.zEvent.noiseLevel) or self.myLevel
+    return effectiveLevel < self.canSpeakOnlyIfThisLevel
 end
 
 function Zebug:isActive()
@@ -433,7 +440,7 @@ end
 
 ---@param caller any a unique identifier, e.g. self or "ID123"
 function Zebug:owner(caller)
-    self.zLabel = getNickName(caller)
+    self.zOwner = getNickName(caller)
     return self
 end
 
@@ -466,6 +473,8 @@ function getNickName(obj)
         (type(obj)=="string" and obj)
         or (obj.getLabel and obj:getLabel())
         or (obj.getName and obj:getName())
+        -- or obj.ufoType -- anything with a ufoType will have a custom tostring
+        or obj.toString and obj:toString()
         or obj.ufoType
         or tostring(obj)
     ) or "nil"
@@ -609,7 +618,7 @@ function Zebug:out(indentWidth, indentChar, ...)
         self.markers = nil
     end
     self.caller = nil
-    self.zLabel = nil
+    self.zOwner = nil
     self.zEvent = nil
     self.zEventMsg = nil
     self.methodName = nil
@@ -686,7 +695,7 @@ function Zebug:getHeader()
         --[[method]] methodName and (methodName .."()") or "",
         --[[line]]   (n and "~["..n.."]") or "",
         --[[event]]  (self.zEvent and (self.zEvent.getFullName and self.zEvent:getFullName()) or self.zEvent), --[[eventMsg]] self.zEventMsg,
-        --[[owner]]  self.mySqueakyWheelId or self.zLabel or ""
+        --[[owner]]  self.mySqueakyWheelId or self.zOwner or ""
 end
 
 local function getName(obj, default)
