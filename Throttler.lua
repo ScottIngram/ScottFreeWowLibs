@@ -8,7 +8,7 @@
 
 local ADDON_NAME, ADDON_SYMBOL_TABLE = ...
 ADDON_SYMBOL_TABLE.Wormhole()
-local zebug = Zebug:new(Zebug.OUTPUT.INFO)
+local zebug = Zebug:new(Zebug.INFO)
 
 ---@class Throttler
 ---@field t0 number time of previous execution

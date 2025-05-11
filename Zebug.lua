@@ -2,7 +2,7 @@
 -- developer utilities for displaying code behavior
 --
 -- Usage:
--- local zebug = Zebug:new(Zebug.OUTPUT.INFO) -- the arg turns on/off different noise levels: TRACE, INFO, WARN, ERROR
+-- local zebug = Zebug:new(Zebug.INFO) -- the arg turns on/off different speaking volumes: TRACE, INFO, WARN, ERROR
 -- zebug.trace:print(arg1,arg2, etc) -- this would be silent considering the "Zebug.OUTPUT.INFO" above.  Otherwise, would display a header and all args as "arg1=arg2, arg3=arg4, " etc.
 -- zebug.info:print(arg1,arg2, etc) -- displays the args and sets its priority as "INFO"
 -- zebug.warn:print(arg1,arg2, etc) -- displays the args and sets its priority as "WARN"
@@ -13,12 +13,12 @@
 --
 -- You can chain some commands
 -- zebug:setMethodName("DoMeNow"):print("foo", bar)
--- During development, you may want to silence some levels that are not currently of interest, so change the arg to WARN or ERROR
--- When you release your addon and want to silence even more levels, use NONE
+-- During development, you may want to silence some speaking volumes that are not currently of interest, so change the arg to WARN or ERROR
+-- When you release your addon and want to silence even more speaking volumes, use NONE
 --
 -- TODO: zebug:wrapAllMethods(MyClassFoo) - wraps all of a class' methods. the wrapper provides a zebugger pre-populated with its
 -- method name, call stack depth (to be used with auto-indentation), etc?
--- and can assign individual methods with custom noiseLevels based on some class config = { getFoo = INFO, setBar = TRACE, default = WARN }
+-- and can assign individual methods with custom speaking volumes based on some class config = { getFoo = INFO, setBar = TRACE, default = WARN }
 
 local ADDON_NAME, ADDON_SYMBOL_TABLE = ...
 
@@ -34,12 +34,12 @@ local RaidMarkerTexture = ADDON_SYMBOL_TABLE.RaidMarkerTexture -- import from Bl
 ---@field warn Zebug end user visible messages
 ---@field info Zebug dev dev messages
 ---@field trace Zebug tedious dev messages
----@field originalNoiseLevel ZebugLevel set upon creation in new()
+---@field originalLowestAllowedSpeakingVolume ZebugSpeakingVolume set upon creation in new()
 ---@field sharedData table data that's common to the family of trace/info/warn/error instances
 local Zebuggers = {}
 
----@class ZebugLevel -- IntelliJ-EmmyLua annotation
-local LEVEL = {
+---@class ZebugSpeakingVolume -- IntelliJ-EmmyLua annotation
+local SPEAKING_VOLUME = {
     ALL_MSGS = 0,
     ALL   = 0,
     TRACE = 2,
@@ -48,11 +48,11 @@ local LEVEL = {
     ERROR = 8,
     NONE  = 10,
 }
-local LEVEL_NAMES = {
-    [LEVEL.TRACE] = "TRACE",
-    [LEVEL.INFO]  = "INFO ",
-    [LEVEL.WARN]  = "WARN ",
-    [LEVEL.ERROR] = "ERROR",
+local SPEAKING_VOLUMES_NAMES = {
+    [SPEAKING_VOLUME.TRACE] = "TRACE",
+    [SPEAKING_VOLUME.INFO]  = "INFO ",
+    [SPEAKING_VOLUME.WARN]  = "WARN ",
+    [SPEAKING_VOLUME.ERROR] = "ERROR",
 }
 
 ---@class Event
@@ -62,14 +62,15 @@ local LEVEL_NAMES = {
 ---@field count number
 ---@field name string
 ---@field owner any the class/object responsible for deploying the event
----@field noiseLevel ZebugLevel
+---@field mySpeakingVolume ZebugSpeakingVolume
 
 ---@type Event
 local Event = {}
 local eCounter = {}
 
 ---@return Event
-function Event:new(owner, name, count, noiseLevel, indent)
+---@param mySpeakingVolume ZebugSpeakingVolume a lower volume (such as NONE, TRACE, or INFO) will produce less debugging output. it will SUPERCEDE the volume "foo" of any zebug.foo:event(thisEvent)
+function Event:new(owner, name, count, mySpeakingVolume, indent)
     if not count then
         if not eCounter[name] then
             eCounter[name] = 1
@@ -87,7 +88,7 @@ function Event:new(owner, name, count, noiseLevel, indent)
         name=name,
         count=count,
         indent=indent,
-        noiseLevel=noiseLevel,
+        mySpeakingVolume = mySpeakingVolume,
         color = c,
         colorOpener = co,
         getFullName=Event.getFullName,
@@ -115,31 +116,28 @@ ADDON_SYMBOL_TABLE.Event = Event
 
 ---@class Zebug -- IntelliJ-EmmyLua annotation
 ---@field isZebug boolean
----@field level number
 ---@field color table
----@field myLevel ZebugLevel
----@field canSpeakOnlyIfThisLevel boolean
+---@field mySpeakingVolume ZebugSpeakingVolume
+---@field lowestAllowedSpeakingVolume ZebugSpeakingVolume
 ---@field indentWidth number
 ---@field zEvent Event
 ---@field zEventMsg string
 ---@field zOwner string
 ---@field markers table<RaidMarker, boolean>
 ---@field sharedData table
----@field OUTPUT ZebugLevel
----@field LEVEL ZebugLevel
----@field TRACE ZebugLevel
----@field INFO ZebugLevel
----@field WARN ZebugLevel
----@field ERROR ZebugLevel
----@field NONE ZebugLevel
+---@field OUTPUT ZebugSpeakingVolume
+---@field LEVEL ZebugSpeakingVolume
+---@field TRACE ZebugSpeakingVolume
+---@field INFO ZebugSpeakingVolume
+---@field WARN ZebugSpeakingVolume
+---@field ERROR ZebugSpeakingVolume
+---@field NONE ZebugSpeakingVolume
 local Zebug = {
-    OUTPUT = LEVEL,
-    LEVEL = LEVEL,
-    TRACE = LEVEL.TRACE,
-    INFO  = LEVEL.INFO,
-    WARN  = LEVEL.WARN,
-    ERROR = LEVEL.ERROR,
-    NONE  = LEVEL.NONE,
+    TRACE = SPEAKING_VOLUME.TRACE,
+    INFO  = SPEAKING_VOLUME.INFO,
+    WARN  = SPEAKING_VOLUME.WARN,
+    ERROR = SPEAKING_VOLUME.ERROR,
+    NONE  = SPEAKING_VOLUME.NONE,
 }
 
 ADDON_SYMBOL_TABLE.Zebug = Zebug
@@ -151,7 +149,7 @@ local namedZebuggers = {}
 -- Constants
 -------------------------------------------------------------------------------
 
-local DEFAULT_ZEBUG = LEVEL.WARN
+local DEFAULT_ZEBUG = SPEAKING_VOLUME.WARN
 local ERR_MSG = "ZEBUGGER SYNTAX ERROR: invoke as zebug.info:func() not zebug.info.func()"
 local PREFIX = "<" .. ADDON_NAME .. ">"
 local DEFAULT_INDENT_CHAR = "#"
@@ -159,10 +157,10 @@ local DEFAULT_INDENT_WIDTH = 0
 local MUTE_INSTANCE
 
 local COLORS = { }
-COLORS[LEVEL.TRACE] = GetClassColorObj("WARRIOR")
-COLORS[LEVEL.INFO]  = GetClassColorObj("MONK")
-COLORS[LEVEL.WARN]  = GetClassColorObj("ROGUE")
-COLORS[LEVEL.ERROR] = GetClassColorObj("DEATHKNIGHT")
+COLORS[SPEAKING_VOLUME.TRACE] = GetClassColorObj("WARRIOR")
+COLORS[SPEAKING_VOLUME.INFO]  = GetClassColorObj("MONK")
+COLORS[SPEAKING_VOLUME.WARN]  = GetClassColorObj("ROGUE")
+COLORS[SPEAKING_VOLUME.ERROR] = GetClassColorObj("DEATHKNIGHT")
 
 local CLASSES = {"HUNTER", "WARLOCK", --[["PRIEST",]] "PALADIN", "MAGE", "ROGUE", "DRUID", "SHAMAN", "WARRIOR", "DEATHKNIGHT", "MONK", "DEMONHUNTER", "EVOKER"};
 local maxColor = #CLASSES
@@ -192,7 +190,7 @@ end
 -------------------------------------------------------------------------------
 
 ---@class ZebuggersSharedData -- IntelliJ-EmmyLua annotation
----@field OUTPUT ZebugLevel -- IntelliJ-EmmyLua annotation
+---@field OUTPUT ZebugSpeakingVolume -- IntelliJ-EmmyLua annotation
 ---@field squeakyWheelId string the first of any number of unique IDs provided by individual callers
 local ZebuggersSharedData = { }
 
@@ -229,23 +227,23 @@ function Zebuggers:new()
     return deepcopy(Zebuggers, {})
 end
 
----@param level ZebugLevel the level at which zebug lines are allowed to produce output.  anything below that level is mute.
-function Zebuggers:setNoiseLevel(level)
-    self.trace:setNoiseLevel(level)
-    self.info:setNoiseLevel(level)
-    self.warn:setNoiseLevel(level)
-    self.error:setNoiseLevel(level)
+---@param speakingVolume ZebugSpeakingVolume the level at which zebug lines are allowed to produce output.  anything below that level is mute.
+function Zebuggers:setLowestAllowedSpeakingVolume(speakingVolume)
+    self.trace:setLowestAllowedSpeakingVolume(speakingVolume)
+    self.info:setLowestAllowedSpeakingVolume(speakingVolume)
+    self.warn:setLowestAllowedSpeakingVolume(speakingVolume)
+    self.error:setLowestAllowedSpeakingVolume(speakingVolume)
 end
 
-function Zebuggers:setNoiseLevelBackToOriginal()
-    self.trace:setNoiseLevel(self.originalNoiseLevel)
-    self.info:setNoiseLevel(self.originalNoiseLevel)
-    self.warn:setNoiseLevel(self.originalNoiseLevel)
-    self.error:setNoiseLevel(self.originalNoiseLevel)
+function Zebuggers:setLowestAllowedSpeakingVolumeBackToOriginal()
+    self.trace:setLowestAllowedSpeakingVolume(self.originalLowestAllowedSpeakingVolume)
+    self.info:setLowestAllowedSpeakingVolume(self.originalLowestAllowedSpeakingVolume)
+    self.warn:setLowestAllowedSpeakingVolume(self.originalLowestAllowedSpeakingVolume)
+    self.error:setLowestAllowedSpeakingVolume(self.originalLowestAllowedSpeakingVolume)
 end
 
-function Zebuggers:getNoiseLevel()
-    return self.originalNoiseLevel
+function Zebuggers:getLowestAllowedSpeakingVolume()
+    return self.originalLowestAllowedSpeakingVolume
 end
 
 
@@ -257,16 +255,16 @@ local function isZebuggerObj(zelf)
     return zelf and zelf.isZebug
 end
 
----@param myLevel ZebugLevel
+---@param mySpeakingVolume ZebugSpeakingVolume
 ---@return Zebug
-local function newInstance(myLevel, canSpeakOnlyIfThisLevel, sharedData)
+local function newInstance(mySpeakingVolume, lowestAllowedSpeakingVolume, sharedData)
     ---@type Zebug
     local self = {
         isZebug = true,
-        level = myLevel,
-        color = COLORS[myLevel],
-        myLevel = myLevel,
-        canSpeakOnlyIfThisLevel = canSpeakOnlyIfThisLevel,
+        level = mySpeakingVolume,
+        color = COLORS[mySpeakingVolume],
+        mySpeakingVolume = mySpeakingVolume,
+        lowestAllowedSpeakingVolume = lowestAllowedSpeakingVolume,
         indentWidth = 5,
         sharedData = sharedData,
     }
@@ -284,25 +282,25 @@ function Zebug:runEvent(event, runEvent)
 end
 
 ---@return Zebuggers -- IntelliJ-EmmyLua annotation
-function Zebug:new(canSpeakOnlyIfThisLevel)
-    if not canSpeakOnlyIfThisLevel then
-        canSpeakOnlyIfThisLevel = DEFAULT_ZEBUG
+function Zebug:new(lowestAllowedSpeakingVolume)
+    if not lowestAllowedSpeakingVolume then
+        lowestAllowedSpeakingVolume = DEFAULT_ZEBUG
     end
-    local isValidNoiseLevel = type(canSpeakOnlyIfThisLevel) == "number"
-    assert(isValidNoiseLevel, ADDON_NAME..": Zebugger:newZebugger() Invalid Noise Level: '".. tostring(canSpeakOnlyIfThisLevel) .."'")
+    local isValidNoiseLevel = type(lowestAllowedSpeakingVolume) == "number"
+    assert(isValidNoiseLevel, ADDON_NAME..": Zebugger:newZebugger() Invalid Speaking Volume: '".. tostring(lowestAllowedSpeakingVolume) .."'")
 
     local sharedData = ZebuggersSharedData:new()
     local zebugger = Zebuggers:new()
-    zebugger.originalNoiseLevel = canSpeakOnlyIfThisLevel
-    zebugger.error = newInstance(LEVEL.ERROR, canSpeakOnlyIfThisLevel, sharedData)
-    zebugger.warn  = newInstance(LEVEL.WARN,  canSpeakOnlyIfThisLevel, sharedData)
-    zebugger.info  = newInstance(LEVEL.INFO,  canSpeakOnlyIfThisLevel, sharedData)
-    zebugger.trace = newInstance(LEVEL.TRACE, canSpeakOnlyIfThisLevel, sharedData)
+    zebugger.originalLowestAllowedSpeakingVolume = lowestAllowedSpeakingVolume
+    zebugger.error = newInstance(SPEAKING_VOLUME.ERROR, lowestAllowedSpeakingVolume, sharedData)
+    zebugger.warn  = newInstance(SPEAKING_VOLUME.WARN, lowestAllowedSpeakingVolume, sharedData)
+    zebugger.info  = newInstance(SPEAKING_VOLUME.INFO, lowestAllowedSpeakingVolume, sharedData)
+    zebugger.trace = newInstance(SPEAKING_VOLUME.TRACE, lowestAllowedSpeakingVolume, sharedData)
     setmetatable(zebugger, { __index = zebugger.info }) -- support syntax such as zebug:out() that bahaves as debuf.info:out()
 
     if not MUTE_INSTANCE then
         local silent = function() return MUTE_INSTANCE end
-        MUTE_INSTANCE = newInstance(LEVEL.TRACE, canSpeakOnlyIfThisLevel, sharedData)
+        MUTE_INSTANCE = newInstance(SPEAKING_VOLUME.TRACE, lowestAllowedSpeakingVolume, sharedData)
         MUTE_INSTANCE.alert = silent
         MUTE_INSTANCE.dump = silent
         MUTE_INSTANCE.dumpy = silent
@@ -327,16 +325,16 @@ function Zebug:getSharedByName(name, ...)
     return namedZebuggers[name]
 end
 
----@param level ZebugLevel
-function Zebug:setNoiseLevel(level)
+---@param speakingVolume ZebugSpeakingVolume
+function Zebug:setLowestAllowedSpeakingVolume(speakingVolume)
     assert(isZebuggerObj(self), ERR_MSG)
-    self.canSpeakOnlyIfThisLevel = level
+    self.lowestAllowedSpeakingVolume = speakingVolume
 end
 
 function Zebug:isMute()
     assert(isZebuggerObj(self), ERR_MSG)
-    local effectiveLevel = (self.zEvent and self.zEvent.noiseLevel) or self.myLevel
-    return effectiveLevel < self.canSpeakOnlyIfThisLevel
+    local speakingVolume = (self.zEvent and self.zEvent.mySpeakingVolume) or self.mySpeakingVolume
+    return speakingVolume < self.lowestAllowedSpeakingVolume
 end
 
 function Zebug:isActive()
@@ -548,7 +546,7 @@ function Zebug:out(indentWidth, indentChar, ...)
     -- <UFO> {rt1} ============================== Ufo/PLAYER_ENTERING_WORLD_1 UFO()~[50] END!
 
     local file, method, line, eventName, eMsg, owner = self:getHeader()
-    local levelMsg = LEVEL_NAMES[self.myLevel]
+    local speakingVolumeMsg = SPEAKING_VOLUMES_NAMES[self.mySpeakingVolume]
 
     local out = {
         self:colorize(PREFIX),
@@ -589,8 +587,8 @@ function Zebug:out(indentWidth, indentChar, ...)
         self:stopColor(), -- end event color
 
         self:startColor(), -- start debug level color
-        levelMsg and " " or "",
-        levelMsg or "",
+        speakingVolumeMsg and " " or "",
+        speakingVolumeMsg or "",
         self:stopColor(),  -- end debug level color
 
         " ",

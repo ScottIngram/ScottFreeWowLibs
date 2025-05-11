@@ -7,7 +7,7 @@
 
 local ADDON_NAME, ADDON_SYMBOL_TABLE = ...
 ADDON_SYMBOL_TABLE.Wormhole()
-local zebug = Zebug:new(Zebug.OUTPUT.WARN)
+local zebug = Zebug:new(Zebug.WARN)
 
 ---@class BlizGlobalEventsListener
 BlizGlobalEventsListener = {}

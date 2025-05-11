@@ -8,7 +8,7 @@
 local ADDON_NAME, ADDON_SYMBOL_TABLE = ...
 ADDON_SYMBOL_TABLE.Wormhole() -- Lua voodoo magic that replaces the current Global namespace with the Ufo object
 
-local zebug = Zebug:new(Zebug.OUTPUT.WARN)
+local zebug = Zebug:new(Zebug.WARN)
 
 -------------------------------------------------------------------------------
 -- Utility Functions
