@@ -275,6 +275,9 @@ end
 function Zebug:runEvent(event, runEvent)
     local width = event.indent or 20
     local x = self.markers -- remember these for later
+    if not self.methodName then
+        self.methodName = "Zebug:runEvent"
+    end
     self:event(event, ADDON_SYMBOL_TABLE.START):out(width, "=",ADDON_SYMBOL_TABLE.START)
     runEvent()
     self.markers = x -- put them back coz they get cleared on every output
@@ -331,9 +334,13 @@ function Zebug:setLowestAllowedSpeakingVolume(speakingVolume)
     self.lowestAllowedSpeakingVolume = speakingVolume
 end
 
+function isEventObj(e)
+    return ADDON_SYMBOL_TABLE.isTable(e) and e.colorOpener
+end
+
 function Zebug:isMute()
     assert(isZebuggerObj(self), ERR_MSG)
-    local speakingVolume = (self.zEvent and self.zEvent.mySpeakingVolume) or self.mySpeakingVolume
+    local speakingVolume = (isEventObj(self.zEvent) and self.zEvent.mySpeakingVolume) or self.mySpeakingVolume
     return speakingVolume < self.lowestAllowedSpeakingVolume
 end
 
@@ -579,6 +586,7 @@ function Zebug:out(indentWidth, indentChar, ...)
         method,
 
         line,
+        " ",
         eventName and "|r" or "", -- end event color
 
         owner and "",
