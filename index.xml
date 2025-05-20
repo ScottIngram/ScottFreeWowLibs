@@ -4,10 +4,10 @@
 >
     <Script file="Wormhole.lua"/>
     <Script file="constants.lua"/>
+    <Script file="utilities.lua"/>
     <Script file="BlizApiEnums.lua"/>
     <Script file="Zebug.lua"/>
     <Script file="BlizGlobalEventsListener.lua"/>
-    <Script file="utilities.lua"/>
     <Script file="Throttler.lua"/>
     <Script file="Pacifier.lua"/>
 

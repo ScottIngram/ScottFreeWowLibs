@@ -8,7 +8,15 @@
 local ADDON_NAME, ADDON_SYMBOL_TABLE = ...
 ADDON_SYMBOL_TABLE.Wormhole() -- Lua voodoo magic that replaces the current Global namespace with the Ufo object
 
-local zebug = Zebug:new(Zebug.WARN)
+local zebug
+
+-- accommodate Zebug even though Zebug.lua is loaded after this file
+function getZebug()
+    if not zebug then
+        zebug = Zebug:new(Zebug.WARN)
+    end
+    return zebug
+end
 
 -------------------------------------------------------------------------------
 -- Utility Functions
@@ -48,7 +56,7 @@ end
 function msgUser(msg, isOptional)
     if isOptional and Config and Config:get("muteLogin") then return end
     if not ADDON_SYMBOL_TABLE.myNameInColor then
-        ADDON_SYMBOL_TABLE.myNameInColor = zebug.info:colorize(ADDON_NAME)
+        ADDON_SYMBOL_TABLE.myNameInColor = getZebug().info:colorize(ADDON_NAME)
     end
 
     print(ADDON_SYMBOL_TABLE.myNameInColor .. ": " .. msg)
@@ -58,7 +66,7 @@ function isInCombatLockdown(actionDescription, isQuiet)
     if InCombatLockdown() then
         local msg = actionDescription or "That action"
         if isQuiet then
-            zebug.info:print(msg, " is not allowed during combat.")
+            getZebug().info:print(msg, " is not allowed during combat.")
         else
             msgUser(msg .. " is not allowed during combat.", IS_OPTIONAL)
         end
@@ -84,18 +92,18 @@ function exeOnceNotInCombat(qId, func)
 
     if isInCombatLockdownQuiet(qId) then
         if not exeQ[qId] then
-            zebug.trace:line(3,"IN COMBAT so queueing", qId)
+            getZebug().trace:line(3,"IN COMBAT so queueing", qId)
             exeQ[qId] = true
             C_Timer.After(1, function()
-                zebug.trace:line(3,"maybe combat, so trying", qId)
+                getZebug().trace:line(3,"maybe combat, so trying", qId)
                 exeOnceNotInCombat(qId, func)
-                zebug.trace:line(3,"maybe combat, so tried ", qId)
+                getZebug().trace:line(3,"maybe combat, so tried ", qId)
             end)
         else
-            zebug.trace:line(3,"IN COMBAT and also already queued", qId)
+            getZebug().trace:line(3,"IN COMBAT and also already queued", qId)
         end
     else
-        zebug.trace:line(3,"no combat so immediately executing ->", qId)
+        getZebug().trace:line(3,"no combat so immediately executing ->", qId)
         exeQ[qId] = nil
         func()
     end
@@ -231,7 +239,7 @@ end
 function moveElementInArray(array, oldPos, newPos)
     if oldPos == newPos then return false end
 
-    zebug.info:line(80)
+    getZebug().info:line(80)
     -- iterate through the array in whichever direction will encounter the oldPos first and newPos last
     -- ahhh, I feel like I'm writing C code again... flashback to 1994... I'm old :-/
     local forward = oldPos < newPos
@@ -240,8 +248,8 @@ function moveElementInArray(array, oldPos, newPos)
     local inc   = forward and 1 or -1
 
     local nomad = array[oldPos]
-    zebug.info:print("moving",nomad, "from", oldPos, "to",newPos)
-    zebug.info:dumpy("ORIGINAL array", array)
+    getZebug().info:print("moving",nomad, "from", oldPos, "to",newPos)
+    getZebug().info:dumpy("ORIGINAL array", array)
 
     local inMoverMode
     for i=start,last,inc do
@@ -249,7 +257,7 @@ function moveElementInArray(array, oldPos, newPos)
             inMoverMode = true
         elseif i == newPos then
             array[i] = nomad
-            zebug.info:dumpy("shifted array", array)
+            getZebug().info:dumpy("shifted array", array)
             return true
         end
 
