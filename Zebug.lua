@@ -29,6 +29,9 @@ local ADDON_NAME, ADDON_SYMBOL_TABLE = ...
 local RaidMarker = ADDON_SYMBOL_TABLE.RaidMarker -- import from BlizApiEnums
 local RaidMarkerTexture = ADDON_SYMBOL_TABLE.RaidMarkerTexture -- import from BlizApiEnums
 
+local tFormat4 = ADDON_SYMBOL_TABLE.tFormat4
+local nFormat4 = ADDON_SYMBOL_TABLE.nFormat4
+
 ---@class Zebuggers -- IntelliJ-EmmyLua annotation
 ---@field error Zebug always shown, highest priority messages
 ---@field warn Zebug end user visible messages
@@ -272,16 +275,19 @@ local function newInstance(mySpeakingVolume, lowestAllowedSpeakingVolume, shared
     return self
 end
 
-function Zebug:runEvent(event, runEvent)
+function Zebug:runEvent(event, runEvent, ...)
     local width = event.indent or 20
     local x = self.markers -- remember these for later
     if not self.methodName then
         self.methodName = "Zebug:runEvent"
     end
-    self:event(event, ADDON_SYMBOL_TABLE.START):out(width, "=",ADDON_SYMBOL_TABLE.START)
+
+    local startTime = GetTimePreciseSec()
+    self:event(event, ADDON_SYMBOL_TABLE.START):out(width, "=",ADDON_SYMBOL_TABLE.START, tFormat4(startTime), ...)
     runEvent()
+    local endTime = GetTimePreciseSec()
     self.markers = x -- put them back coz they get cleared on every output
-    self:event(event, ADDON_SYMBOL_TABLE.END):out(width, "=",ADDON_SYMBOL_TABLE.END)
+    self:event(event, ADDON_SYMBOL_TABLE.END):out(width, "=",ADDON_SYMBOL_TABLE.END, tFormat4(endTime), "elapsed time", nFormat4(endTime-startTime),  ...)
 end
 
 ---@return Zebuggers -- IntelliJ-EmmyLua annotation

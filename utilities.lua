@@ -420,3 +420,13 @@ end
 function isNil(obj)
     return type(obj) == "nil"
 end
+
+function nFormat4(n)
+    return string.format("%.4f", n or 0)
+end
+
+local t0 = GetTimePreciseSec()
+
+function tFormat4(t)
+    return string.format("%.4f", (t or 0) - t0)
+end
