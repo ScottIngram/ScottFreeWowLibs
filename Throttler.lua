@@ -100,7 +100,7 @@ function Throttler:exe(...)
     runNow = runNow or (elapsed >= self.maxFreq)
 
     if runNow then
-        zebug.info:out(10,div, "t", tFormat4(time()), "Immediately EXE", self.id, "elapsed",elapsed)
+        zebug.info:out(10,div, "t", tFormat3(time()), "Immediately EXE", self.id, "elapsed",elapsed)
         self:doItNow(...)
         return true
     else
@@ -113,14 +113,14 @@ function Throttler:exe(...)
             local runWhen = self.maxFreq - elapsed
             local scheduledAt = time()
             counter = counter + 1
-            zebug.info:out(10,div, "t", tFormat4(time()), "Scheduling for later", self.id, "elapsed",elapsed, "runWhen",runWhen, "count", counter)
+            zebug.info:out(10,div, "t", tFormat3(time()), "Scheduling for later", self.id, "elapsed",elapsed, "runWhen",runWhen, "count", counter)
 
             -- hopefully this pack/unpack won't impose TOO much of a performance hit.
             -- It happens at most only once within a maxFreq period
             local capturedArgs = {...}
             C_Timer.After(runWhen, function() -- using ... here is fail.  No args are passed from C_Timer.After into the func
                 local prolapsed = time() - scheduledAt
-                zebug.info:name("delayedExe"):out(15,div, "t", tFormat4(time()), "delayed EXE", self.id, "prolapsed", prolapsed, "count", counter)
+                zebug.info:name("delayedExe"):out(15,div, "t", tFormat3(time()), "delayed EXE", self.id, "prolapsed", prolapsed, "count", counter)
                 self:doItNow(unpack(capturedArgs))
             end)
         end

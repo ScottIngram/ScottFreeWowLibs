@@ -29,8 +29,8 @@ local ADDON_NAME, ADDON_SYMBOL_TABLE = ...
 local RaidMarker = ADDON_SYMBOL_TABLE.RaidMarker -- import from BlizApiEnums
 local RaidMarkerTexture = ADDON_SYMBOL_TABLE.RaidMarkerTexture -- import from BlizApiEnums
 
-local tFormat4 = ADDON_SYMBOL_TABLE.tFormat4
-local nFormat4 = ADDON_SYMBOL_TABLE.nFormat4
+local tFormat3 = ADDON_SYMBOL_TABLE.tFormat3
+local nFormat3 = ADDON_SYMBOL_TABLE.nFormat3
 local isString = ADDON_SYMBOL_TABLE.isString
 local isFloat = ADDON_SYMBOL_TABLE.isFloat
 
@@ -285,11 +285,11 @@ function Zebug:runEvent(event, runEvent, ...)
     end
 
     local startTime = GetTimePreciseSec()
-    self:event(event, ADDON_SYMBOL_TABLE.START):out(width, "=",ADDON_SYMBOL_TABLE.START, tFormat4(startTime), ...)
+    self:event(event, ADDON_SYMBOL_TABLE.START):out(width, "=",ADDON_SYMBOL_TABLE.START, tFormat3(startTime), ...)
     runEvent()
     local endTime = GetTimePreciseSec()
     self.markers = x -- put them back coz they get cleared on every output
-    self:event(event, ADDON_SYMBOL_TABLE.END):out(width, "=",ADDON_SYMBOL_TABLE.END, tFormat4(endTime), "elapsed time", nFormat4(endTime-startTime),  ...)
+    self:event(event, ADDON_SYMBOL_TABLE.END):out(width, "=",ADDON_SYMBOL_TABLE.END, tFormat3(endTime), "elapsed time", nFormat3(endTime-startTime),  ...)
 end
 
 ---@return Zebuggers -- IntelliJ-EmmyLua annotation
@@ -767,5 +767,5 @@ end
 
 function Zebug:asString(v)
     assert(isZebuggerObj(self), ERR_MSG)
-    return ((v==nil)and"nil") or (isString(v) and v) or (isFloat(v) and nFormat4(v)) or tostring(v) -- or
+    return ((v==nil)and"nil") or (isString(v) and v) or (isFloat(v) and nFormat3(v)) or tostring(v) -- or
 end
