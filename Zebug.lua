@@ -281,7 +281,7 @@ function Zebug:runEvent(event, runEvent, ...)
     local width = event.indent or 20
     local x = self.markers -- remember these for later
     if not self.methodName then
-        self.methodName = "Zebug:runEvent"
+        self.methodName = "runEvent"
     end
 
     local startTime = GetTimePreciseSec()
@@ -484,10 +484,10 @@ end
 function getNickName(obj)
     return obj and (
         (type(obj)=="string" and obj)
+        or obj.toString and obj:toString()
         or (obj.getLabel and obj:getLabel())
         or (obj.getName and obj:getName())
         -- or obj.ufoType -- anything with a ufoType will have a custom tostring
-        or obj.toString and obj:toString()
         or obj.ufoType
         or tostring(obj)
     ) or "nil"
