@@ -105,11 +105,9 @@ function Throttler:exe(...)
             -- hopefully this pack/unpack won't impose TOO much of a performance hit.
             -- It happens at most only once within a maxFreq period
             local capturedArgs = {...}
-            --zebug.info:dumpy("... FRESH", capturedArgs)
             C_Timer.After(runWhen, function() -- using ... here is fail.  No args are passed from After into the func
                 local prolapsed = time() - scheduledAt
                 zebug.info:--[[ifMe1st(self.id):]]name("delayedExe"):out(7,div, "t", tFormat4(time()), "delayed EXE", self.id, "prolapsed", nFormat4(prolapsed), "xId", exeId)
-                --zebug.info:dumpy("... CLOSURE", capturedArgs)
                 local a,b,c,d,e,f = unpack(capturedArgs)
                 zebug.info:name("delayedExe"):print("a",a, "b",b, "c",c, "d",d, "e",e)
 
