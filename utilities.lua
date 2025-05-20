@@ -11,6 +11,7 @@ ADDON_SYMBOL_TABLE.Wormhole() -- Lua voodoo magic that replaces the current Glob
 local zebug
 
 -- accommodate Zebug even though Zebug.lua is loaded after this file
+---@return Zebuggers
 function getZebug()
     if not zebug then
         zebug = Zebug:new(Zebug.WARN)
@@ -395,6 +396,21 @@ end
 ---@return boolean true if the provided obj is of type number
 function isNumber(obj)
     return type(obj) == "number"
+end
+
+---@param obj unknown
+---@return boolean true if the provided obj is of type integer
+function isInteger(obj)
+    return math.type(obj) == "integer"
+end
+
+---@param obj unknown
+---@return boolean true if the provided obj is of type floating point number
+function isFloat(n)
+    -- return math.type(obj) == "float" -- yay! the Mac WoW (PC too?) implementation of Lua does NOT include math.type
+    if not isNumber(n) then return end
+    local _, partAfterDecimal = math.modf(n)
+    return partAfterDecimal > 0
 end
 
 ---@param obj unknown

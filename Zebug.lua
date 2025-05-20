@@ -31,6 +31,8 @@ local RaidMarkerTexture = ADDON_SYMBOL_TABLE.RaidMarkerTexture -- import from Bl
 
 local tFormat4 = ADDON_SYMBOL_TABLE.tFormat4
 local nFormat4 = ADDON_SYMBOL_TABLE.nFormat4
+local isString = ADDON_SYMBOL_TABLE.isString
+local isFloat = ADDON_SYMBOL_TABLE.isFloat
 
 ---@class Zebuggers -- IntelliJ-EmmyLua annotation
 ---@field error Zebug always shown, highest priority messages
@@ -765,5 +767,5 @@ end
 
 function Zebug:asString(v)
     assert(isZebuggerObj(self), ERR_MSG)
-    return ((v==nil)and"nil") or ((type(v) == "string") and v) or tostring(v) -- or
+    return ((v==nil)and"nil") or (isString(v) and v) or (isFloat(v) and nFormat4(v)) or tostring(v) -- or
 end
