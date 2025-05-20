@@ -12,9 +12,10 @@ local zebug = Zebug:new(Zebug.INFO)
 
 ---@class Throttler
 ---@field t0 number time of previous execution
----@field isQueued boolean an execution is waiting in the queue
+---@field isQueued boolean some execution is already waiting in the queue
 ---@field func function the command to execute
 ---@field maxFreq number how often are we allowed to execute the function (in seconds, decimals allowed) ex 1.5
+---@field noQueueing boolean disables the queue and simply discards any invocations that happen during the maxFreq countdown
 ---@field id string a unique identifier to ensure the same func doesn't get queued more than once
 Throttler = { }
 
@@ -22,8 +23,8 @@ Throttler = { }
 -- class variables - shared between all instances
 -------------------------------------------------------------------------------
 
-local div = "œ"
-local exeId = 1
+local div = "Ø"
+local counter = 1
 
 -------------------------------------------------------------------------------
 -- Overrides
@@ -39,16 +40,20 @@ local time = GetTimePreciseSec -- fuck whole second bullshit
 ---@param maxFreq number how often are we allowed to execute the function (in seconds, decimals allowed) ex 1.5
 ---@param id string a unique identifier to ensure the same func doesn't get queued more than once
 ---@return Throttler - a new instance of Throttler dedicating to executing the given function no more often than maxFreq
-function Throttler:new(func, maxFreq, id)
-    local zelf = deepcopy(self, {
+function Throttler:new(func, maxFreq, id, noQueueing)
+    ---@type Throttler
+    local protoSelf = {
         ufoType = "Throttler",
         func = func,
         maxFreq = maxFreq or 1.0,
+        noQueueing = noQueueing,
         id = tostring(id or "CACOPHONY"),
-    })
+    }
+
+    local zelf = deepcopy(self, protoSelf)
     
-    zebug.trace:--[[ifMe1st(self.id):]]out(5,div, "I'm the first ID",id)
-    
+    zebug.trace:out(10,div, "I'm the first ID",id)
+
     return zelf
 end
 
@@ -62,9 +67,17 @@ end
 ---@param maxFreq number how often are we allowed to execute the function (in seconds, decimals allowed) ex 1.5
 ---@param id string a unique identifier to ensure the same func doesn't get queued more than once
 ---@param func function the command to execute
----@return function - the same function but now limited to being called no more often than maxFreq
+---@return function - the same function but now limited to being called no more often than maxFreq AND at most one throttled call will enjoy a queue before exe
 function Throttler:throttle(maxFreq, id, func)
     return self:new(func, maxFreq, id):asFunc()
+end
+
+---@param maxFreq number how often are we allowed to execute the function (in seconds, decimals allowed) ex 1.5
+---@param id string a unique identifier to ensure the same func doesn't get queued more than once
+---@param func function the command to execute
+---@return function - the same function but now limited to being called no more often than maxFreq AND no queue for delayed calls
+function Throttler:throttleAndNoQueue(maxFreq, id, func)
+    return self:new(func, maxFreq, id, true):asFunc()
 end
 
 -- execute eventually (perhaps immediately) depending on the maxFreq param given to new()
@@ -87,30 +100,27 @@ function Throttler:exe(...)
     runNow = runNow or (elapsed >= self.maxFreq)
 
     if runNow then
-        zebug.info:--[[ifMe1st(self.id):]]out(5,div, "t", tFormat4(time()), "Immediately EXE", self.id, "elapsed",nFormat4(elapsed))
+        zebug.info:out(10,div, "t", tFormat4(time()), "Immediately EXE", self.id, "elapsed",elapsed)
         self:doItNow(...)
         return true
     else
         -- do it later
         -- but have we already queued an execution for later?
-        if self.isQueued then
-            zebug.trace:--[[ifMe1st(self.id):]]out(5,div, "t", tFormat4(time()), "Discarding", self.id, "elapsed",nFormat4(elapsed))
+        if self.isQueued or self.noQueueing then
+            zebug.trace:out(10,div, "Discarding", self.id, "elapsed",elapsed)
         else
             self.isQueued = true
             local runWhen = self.maxFreq - elapsed
             local scheduledAt = time()
-            exeId = exeId + 1
-            zebug.info:--[[ifMe1st(self.id):]]out(5,div, "t", tFormat4(time()), "Scheduling for later", self.id, "elapsed",nFormat4(elapsed), "runWhen",runWhen, "xId", exeId)
+            counter = counter + 1
+            zebug.info:out(10,div, "t", tFormat4(time()), "Scheduling for later", self.id, "elapsed",elapsed, "runWhen",runWhen, "count", counter)
 
             -- hopefully this pack/unpack won't impose TOO much of a performance hit.
             -- It happens at most only once within a maxFreq period
             local capturedArgs = {...}
-            C_Timer.After(runWhen, function() -- using ... here is fail.  No args are passed from After into the func
+            C_Timer.After(runWhen, function() -- using ... here is fail.  No args are passed from C_Timer.After into the func
                 local prolapsed = time() - scheduledAt
-                zebug.info:--[[ifMe1st(self.id):]]name("delayedExe"):out(7,div, "t", tFormat4(time()), "delayed EXE", self.id, "prolapsed", nFormat4(prolapsed), "xId", exeId)
-                local a,b,c,d,e,f = unpack(capturedArgs)
-                zebug.info:name("delayedExe"):print("a",a, "b",b, "c",c, "d",d, "e",e)
-
+                zebug.info:name("delayedExe"):out(15,div, "t", tFormat4(time()), "delayed EXE", self.id, "prolapsed", prolapsed, "count", counter)
                 self:doItNow(unpack(capturedArgs))
             end)
         end
