@@ -279,16 +279,20 @@ end
 
 function Zebug:runEvent(event, runEvent, ...)
     local width = event.indent or 20
-    local x = self.markers -- remember these for later
     if not self.methodName then
         self.methodName = "runEvent"
     end
+    local methodName = self.methodName -- remember these for later
+    local markers = self.markers -- remember these for later
 
     local startTime = GetTimePreciseSec()
     self:event(event, ADDON_SYMBOL_TABLE.START):out(width, "=",ADDON_SYMBOL_TABLE.START, tFormat3(startTime), ...)
     runEvent()
     local endTime = GetTimePreciseSec()
-    self.markers = x -- put them back coz they get cleared on every output
+
+    -- put these back coz they get cleared on every output
+    self.markers = markers
+    self.methodName = methodName
     self:event(event, ADDON_SYMBOL_TABLE.END):out(width, "=",ADDON_SYMBOL_TABLE.END, tFormat3(endTime), "elapsed time", nFormat3(endTime-startTime),  ...)
 end
 
@@ -441,7 +445,7 @@ function Zebug:ifThen(conditional)
     end
 end
 
----@param event Event
+---@param event string|Event metadata describing the instigating event - good for debugging
 function Zebug:event(event, msg)
     assert(event,"can't set nil event!") -- TODO: replace with event = event or UNKNOWN_EVENT
     --assert(ADDON_SYMBOL_TABLE.isTable(event),"event obj must be a table!")
