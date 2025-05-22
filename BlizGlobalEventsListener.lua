@@ -22,7 +22,7 @@ local counter = {}
 ---@param eventHandlers table<string, function> key -> "EVENT_NAME" , value -> handlerCallback
 ---@param addonLoadedHandlers table<string, function> key -> "OtherAddonName" , value -> funcToCallWhenOtherAddonLoads
 -- Note: addons that load before yours will not be handled.  Use C_AddOns.IsAddOnLoaded(addonName) instead
-function BlizGlobalEventsListener:register(zelf, eventHandlers, addonLoadedHandlers)
+function BlizGlobalEventsListener:register(zelf, eventHandlers, handlersForAddonLoadedEvents)
     local dispatcher = function(listenerFrame, eventName, ...)
         if not counter[eventName] then
             counter[eventName] = 1
@@ -54,10 +54,10 @@ function BlizGlobalEventsListener:register(zelf, eventHandlers, addonLoadedHandl
             oldHandler(zelf)
         end
 
-        if not addonLoadedHandlers then return end
+        if not handlersForAddonLoadedEvents then return end
 
         -- find a handler for the addon that just triggered the ADDON_LOADED event
-        for addonName, handler in pairs(addonLoadedHandlers) do
+        for addonName, handler in pairs(handlersForAddonLoadedEvents) do
             zebug.trace:name("dispatcher"):print("loaded",loadedAddonName, "comparing to",addonName, "handler",handler)
             if addonName == loadedAddonName then
                 zebug.info:print("invoking", addonName)
