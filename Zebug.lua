@@ -33,6 +33,7 @@ local tFormat3 = ADDON_SYMBOL_TABLE.tFormat3
 local nFormat3 = ADDON_SYMBOL_TABLE.nFormat3
 local isString = ADDON_SYMBOL_TABLE.isString
 local isFloat = ADDON_SYMBOL_TABLE.isFloat
+local isFunction = ADDON_SYMBOL_TABLE.isFunction
 
 ---@class Zebuggers -- IntelliJ-EmmyLua annotation
 ---@field error Zebug always shown, highest priority messages
@@ -66,6 +67,7 @@ local SPEAKING_VOLUMES_NAMES = {
 ---@field indent number
 ---@field count number
 ---@field name string
+---@field dynamicName boolean true if name is a function
 ---@field owner any the class/object responsible for deploying the event
 ---@field mySpeakingVolume ZebugSpeakingVolume
 
@@ -76,6 +78,10 @@ local eCounter = {}
 ---@return Event
 ---@param mySpeakingVolume ZebugSpeakingVolume a lower volume (such as NONE, TRACE, or INFO) will produce less debugging output. it will SUPERCEDE the volume "foo" of any zebug.foo:event(thisEvent)
 function Event:new(owner, name, count, mySpeakingVolume, indent)
+    assert(owner, "'owner' param is missing")
+    assert(name, "'name' param is missing")
+    assert(isString(name) or isFunction(name), "'name' is wrong type. Must be string or func.")
+
     if not count then
         if not eCounter[name] then
             eCounter[name] = 1
@@ -91,6 +97,7 @@ function Event:new(owner, name, count, mySpeakingVolume, indent)
     local self = {
         owner=owner,
         name=name,
+        dynamicName=isFunction(name),
         count=count,
         indent=indent,
         mySpeakingVolume = mySpeakingVolume,
@@ -106,8 +113,8 @@ function Event:new(owner, name, count, mySpeakingVolume, indent)
 end
 
 function Event:getFullName()
-    if not self.fullName then
-        self.fullName = ((self.owner and getNickName(self.owner) .." / ") or "") .. self.name .. "_" .. self.count
+    if (not self.fullName) or self.dynamicName then
+        self.fullName = ((self.owner and getNickName(self.owner) .." / ") or "") .. (((not self.dynamicName) and self.name) or self.name()) .. "_" .. self.count
     end
     return self.fullName
 end
