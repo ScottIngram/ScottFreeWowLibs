@@ -289,8 +289,11 @@ function Zebug:runEvent(event, runEvent, ...)
     if not self.methodName then
         self.methodName = "runEvent"
     end
-    local methodName = self.methodName -- remember these for later
-    local markers = self.markers -- remember these for later
+
+    -- remember these for later
+    local methodName = self.methodName
+    local markers = self.markers
+    local zOwner = self.zOwner
 
     local startTime = GetTimePreciseSec()
     self:event(event, ADDON_SYMBOL_TABLE.START):out(width, "=",ADDON_SYMBOL_TABLE.START, tFormat3(startTime), ...)
@@ -300,6 +303,7 @@ function Zebug:runEvent(event, runEvent, ...)
     -- put these back coz they get cleared on every output
     self.markers = markers
     self.methodName = methodName
+    self.zOwner = zOwner
     self:event(event, ADDON_SYMBOL_TABLE.END):out(width, "=",ADDON_SYMBOL_TABLE.END, tFormat3(endTime), "elapsed time", nFormat3(endTime-startTime),  ...)
 end
 
@@ -464,6 +468,7 @@ end
 
 ---@param caller any a unique identifier, e.g. self or "ID123"
 function Zebug:owner(caller)
+    if self:isMute() then return self end
     self.zOwner = getNickName(caller)
     return self
 end
@@ -599,21 +604,21 @@ function Zebug:out(indentWidth, indentChar, ...)
         " ",
         --header or "",
 
-        file,
+        --eventName and "|r" or "", -- end event color
+        self:stopColor(), -- end event color
 
+        file,
         method and ":" or "",
         method,
 
         line,
         " ",
-        eventName and "|r" or "", -- end event color
+
+        self:startColor(), -- start debug level color
 
         owner and "",
         owner,
 
-        self:stopColor(), -- end event color
-
-        self:startColor(), -- start debug level color
         speakingVolumeMsg and " " or "",
         speakingVolumeMsg or "",
         self:stopColor(),  -- end debug level color
