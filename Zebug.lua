@@ -468,7 +468,10 @@ end
 
 ---@param caller any a unique identifier, e.g. self or "ID123"
 function Zebug:owner(caller)
-    if self:isMute() then return self end
+    if self:isMute() then
+        self.zOwner = nil
+        return self
+    end
     self.zOwner = getNickName(caller)
     return self
 end
@@ -583,6 +586,13 @@ function Zebug:out(indentWidth, indentChar, ...)
         self:colorize(PREFIX),
         " ",
 
+        eventName and self.zEvent.colorOpener or "", -- start event color
+        eventName and "[" or "",
+        eventName or "",
+        eventName and (eMsg and " <-- " or "") or "",
+        eventName and eMsg or "",
+        eventName and "] " or "",
+
         self.markers and self.markers[RaidMarker.STAR] or "",
         self.markers and self.markers[RaidMarker.CIRCLE] or "",
         self.markers and self.markers[RaidMarker.DIAMOND] or "",
@@ -592,13 +602,6 @@ function Zebug:out(indentWidth, indentChar, ...)
         self.markers and self.markers[RaidMarker.CROSS] or "",
         self.markers and self.markers[RaidMarker.SKULL] or "",
         ADDON_SYMBOL_TABLE.isTableNotEmpty(self.markers) and " " or "",
-
-        eventName and self.zEvent.colorOpener or "", -- start event color
-        eventName and "[" or "",
-        eventName or "",
-        eventName and (eMsg and " <-- " or "") or "",
-        eventName and eMsg or "",
-        eventName and "] " or "",
 
         indent,
         " ",
