@@ -27,11 +27,11 @@ local queue = {}
 -- Methods
 -------------------------------------------------------------------------------
 
-function Pacifier:pacify(class, funcName)
-    local func = class[funcName]
+function Pacifier:pacify(owner, funcName)
+    local func = owner[funcName]
     local callCounter = 0
-    local id = ((class.getLabel and class:getLabel()) or tostring(class))
-    local label = id .. ":" .. funcName
+    local ownersLabel = ((owner.getLabel and owner:getLabel()) or tostring(owner))
+    local label = ownersLabel .. "->" .. funcName
 
     local wrapped
     wrapped = function(a,b,c,d,e)
