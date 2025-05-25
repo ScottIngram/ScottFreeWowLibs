@@ -114,7 +114,10 @@ end
 
 function Event:getFullName()
     if (not self.fullName) or self.dynamicName then
-        self.fullName = ((self.owner and getNickName(self.owner) .." / ") or "") .. (((not self.dynamicName) and self.name) or self.name()) .. "_" .. self.count
+        local name = (((not self.dynamicName) and self.name) or self.name())
+        local hasUnderscore = string.find(name, "_")
+        local sep = hasUnderscore and "_" or "-"
+        self.fullName = ((self.owner and getNickName(self.owner) .." / ") or "") .. name .. sep .. self.count
     end
     return self.fullName
 end
@@ -284,6 +287,8 @@ local function newInstance(mySpeakingVolume, lowestAllowedSpeakingVolume, shared
     return self
 end
 
+---@param event Event
+---@param runEvent fun(event:Event) callback to run.  will receive the same event as provided
 function Zebug:runEvent(event, runEvent, ...)
     local width = event.indent or 20
     if not self.methodName then
@@ -297,7 +302,7 @@ function Zebug:runEvent(event, runEvent, ...)
 
     local startTime = GetTimePreciseSec()
     self:event(event, ADDON_SYMBOL_TABLE.START):out(width, "=",ADDON_SYMBOL_TABLE.START, tFormat3(startTime), ...)
-    runEvent()
+    runEvent(event)
     local endTime = GetTimePreciseSec()
 
     -- put these back coz they get cleared on every output
@@ -502,7 +507,8 @@ end
 
 function getNickName(obj)
     return obj and (
-        (type(obj)=="string" and obj)
+        (isString(obj) and obj)
+        or (isFunction(obj) and (obj()))
         or obj.toString and obj:toString()
         or (obj.getLabel and obj:getLabel())
         or (obj.getName and obj:getName())
