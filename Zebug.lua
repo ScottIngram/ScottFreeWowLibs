@@ -595,7 +595,7 @@ function Zebug:out(indentWidth, indentChar, ...)
         eventName and self.zEvent.colorOpener or "", -- start event color
         eventName and "[" or "",
         eventName or "",
-        eventName and (eMsg and " <-- " or "") or "",
+        eventName and (eMsg and " <==== " or "") or "",
         eventName and eMsg or "",
         eventName and "] " or "",
 
