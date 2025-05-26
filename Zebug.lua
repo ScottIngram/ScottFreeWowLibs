@@ -21,19 +21,11 @@
 -- and can assign individual methods with custom speaking volumes based on some class config = { getFoo = INFO, setBar = TRACE, default = WARN }
 
 local ADDON_NAME, ADDON_SYMBOL_TABLE = ...
+ADDON_SYMBOL_TABLE.Wormhole() -- Lua voodoo magic that replaces the current Global namespace with the Ufo
 
 -------------------------------------------------------------------------------
 -- Module Loading / Exporting
 -------------------------------------------------------------------------------
-
-local RaidMarker = ADDON_SYMBOL_TABLE.RaidMarker -- import from BlizApiEnums
-local RaidMarkerTexture = ADDON_SYMBOL_TABLE.RaidMarkerTexture -- import from BlizApiEnums
-
-local tFormat3 = ADDON_SYMBOL_TABLE.tFormat3
-local nFormat3 = ADDON_SYMBOL_TABLE.nFormat3
-local isString = ADDON_SYMBOL_TABLE.isString
-local isFloat = ADDON_SYMBOL_TABLE.isFloat
-local isFunction = ADDON_SYMBOL_TABLE.isFunction
 
 ---@class Zebuggers -- IntelliJ-EmmyLua annotation
 ---@field error Zebug always shown, highest priority messages
@@ -72,7 +64,7 @@ local SPEAKING_VOLUMES_NAMES = {
 ---@field mySpeakingVolume ZebugSpeakingVolume
 
 ---@type Event
-local Event = {}
+Event = {}
 local eCounter = {}
 
 ---@return Event
@@ -107,7 +99,7 @@ function Event:new(owner, name, count, mySpeakingVolume, indent)
         toString=Event.toString,
     }
 
-    ADDON_SYMBOL_TABLE.UfoMixIn.installMyToString(self)
+    UfoMixIn.installMyToString(self)
 
     return self
 end
@@ -125,9 +117,6 @@ end
 function Event:toString()
     return self:getFullName()
 end
-
-
-ADDON_SYMBOL_TABLE.Event = Event
 
 ---@class Zebug -- IntelliJ-EmmyLua annotation
 ---@field isZebug boolean
@@ -147,15 +136,13 @@ ADDON_SYMBOL_TABLE.Event = Event
 ---@field WARN ZebugSpeakingVolume
 ---@field ERROR ZebugSpeakingVolume
 ---@field NONE ZebugSpeakingVolume
-local Zebug = {
+Zebug = {
     TRACE = SPEAKING_VOLUME.TRACE,
     INFO  = SPEAKING_VOLUME.INFO,
     WARN  = SPEAKING_VOLUME.WARN,
     ERROR = SPEAKING_VOLUME.ERROR,
     NONE  = SPEAKING_VOLUME.NONE,
 }
-
-ADDON_SYMBOL_TABLE.Zebug = Zebug
 
 ---@type table<string,Zebuggers>
 local namedZebuggers = {}
@@ -301,7 +288,7 @@ function Zebug:runEvent(event, runEvent, ...)
     local zOwner = self.zOwner
 
     local startTime = GetTimePreciseSec()
-    self:event(event, ADDON_SYMBOL_TABLE.START):out(width, "=",ADDON_SYMBOL_TABLE.START, tFormat3(startTime), ...)
+    self:event(event, START):out(width, "=",START, tFormat3(startTime), ...)
     runEvent(event)
     local endTime = GetTimePreciseSec()
 
@@ -309,7 +296,7 @@ function Zebug:runEvent(event, runEvent, ...)
     self.markers = markers
     self.methodName = methodName
     self.zOwner = zOwner
-    self:event(event, ADDON_SYMBOL_TABLE.END):out(width, "=",ADDON_SYMBOL_TABLE.END, tFormat3(endTime), "elapsed time", nFormat3(endTime-startTime),  ...)
+    self:event(event, END):out(width, "=",END, tFormat3(endTime), "elapsed time", nFormat3(endTime-startTime),  ...)
 end
 
 ---@return Zebuggers -- IntelliJ-EmmyLua annotation
@@ -363,7 +350,7 @@ function Zebug:setLowestAllowedSpeakingVolume(speakingVolume)
 end
 
 function isEventObj(e)
-    return ADDON_SYMBOL_TABLE.isTable(e) and e.colorOpener
+    return isTable(e) and e.colorOpener
 end
 
 function Zebug:isMute()
@@ -464,7 +451,7 @@ end
 ---@param event string|Event metadata describing the instigating event - good for debugging
 function Zebug:event(event, msg)
     assert(event,"can't set nil event!") -- TODO: replace with event = event or UNKNOWN_EVENT
-    --assert(ADDON_SYMBOL_TABLE.isTable(event),"event obj must be a table!")
+    --assert(isTable(event),"event obj must be a table!")
     --assert(event.getFullName,"provided param is not actually an Event object!")
     self.zEvent = event
     self.zEventMsg = msg
