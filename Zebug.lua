@@ -382,7 +382,18 @@ function Zebug:stopColor()
     return "|r"
 end
 
--- set a raid marker = STAR
+function Zebug:mAll(condition)
+    for k, v in pairs(RaidMarkerTexture) do
+        --print(k,v)
+        self:mark(k, condition)
+    end
+    for k, v in pairs(MarkTexture) do
+        --print(k,v)
+        self:mark(k, condition)
+    end
+    return self
+end
+
 function Zebug:mStar(condition)
     return self:mark(RaidMarker.STAR, condition)
 end
@@ -417,15 +428,16 @@ end
 
 -- TODO - others? just various icons?
 
-function Zebug:mark(marker, condition)
+---@param id RaidMarker | Mark
+function Zebug:mark(id, condition)
     local doIt = true -- in the absence of a boolean conditional, default to YES
-    if condition and (type(condition) == "boolean") then
+    if isBoolean(condition) then
         doIt = condition
     end
     if not self.markers then
         self.markers = {}
     end
-    self.markers[marker] = doIt and RaidMarkerTexture[marker]
+    self.markers[id] = doIt and ((RaidMarkerTexture[id] or MarkTexture[id]))
     return self
 end
 
@@ -575,7 +587,7 @@ function Zebug:out(indentWidth, indentChar, ...)
     local file, method, line, eventName, eMsg, owner = self:getHeader()
     local speakingVolumeMsg = SPEAKING_VOLUMES_NAMES[self.mySpeakingVolume]
 
-    local out = {
+    local out1 = {
         self:colorize(PREFIX),
         " ",
 
@@ -585,7 +597,11 @@ function Zebug:out(indentWidth, indentChar, ...)
         eventName and (eMsg and " <==== " or "") or "",
         eventName and eMsg or "",
         eventName and "] " or "",
+    }
 
+    local out2 = self:roundUpAllTheMarkers()
+
+--[[
         self.markers and self.markers[RaidMarker.STAR] or "",
         self.markers and self.markers[RaidMarker.CIRCLE] or "",
         self.markers and self.markers[RaidMarker.DIAMOND] or "",
@@ -594,8 +610,10 @@ function Zebug:out(indentWidth, indentChar, ...)
         self.markers and self.markers[RaidMarker.SQUARE] or "",
         self.markers and self.markers[RaidMarker.CROSS] or "",
         self.markers and self.markers[RaidMarker.SKULL] or "",
-        ADDON_SYMBOL_TABLE.isTableNotEmpty(self.markers) and " " or "",
+        isTableNotEmpty(self.markers) and " " or "",
+]]
 
+    local out3 = {
         indent,
         " ",
         --header or "",
@@ -628,19 +646,24 @@ function Zebug:out(indentWidth, indentChar, ...)
         local isOdd = i%2 == 1
         if isOdd then
             -- table.insert(out, " .. ")
-            table.insert(out, self:asString(v))
+            --table.insert(out, self:asString(v))
+            out1[#out1 +1] = self:asString(v)
         else
-            table.insert(out, ": ")
-            table.insert(out, self:asString(v))
+            out1[#out1 +1] =  ": "
+            out1[#out1 +1] =  self:asString(v)
             if i~= args.n then
-                table.insert(out, " .. ")
+                out1[#out1 +1] =  " .. "
             end
         end
     end
 
-    print(table.concat(out,""))
+    print(
+            table.concat(out1,""),
+            out2 and table.concat(out2,""),
+            table.concat(out3,"")
+    )
 
-    if ADDON_SYMBOL_TABLE.isTableNotEmpty(self.markers) then
+    if isTableNotEmpty(self.markers) then
         self.markers = nil
     end
     self.caller = nil
@@ -650,6 +673,17 @@ function Zebug:out(indentWidth, indentChar, ...)
     self.methodName = nil
     self.mySqueakyWheelId = nil
     return self
+end
+
+function Zebug:roundUpAllTheMarkers()
+    if not self.markers then return nil end
+    local result = {}
+    for k, v in pairs(self.markers) do
+        --print("icon ",k, "->", v)
+        result[#result+1] = v
+    end
+    result[#result+1] = " "
+    return result
 end
 
 function table.pack(...)
