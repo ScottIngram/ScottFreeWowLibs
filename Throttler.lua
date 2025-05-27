@@ -130,8 +130,8 @@ function Throttler:exe(...)
 end
 
 function Throttler:doItNow(...)
-    self.func(...)
     self.t0 = time() -- reset T0 to NOW!
     self.isQueued = false
+    self.func(...)
 end
 
