@@ -278,10 +278,8 @@ local function newInstance(mySpeakingVolume, lowestAllowedSpeakingVolume, shared
     return self
 end
 
----@param event Event
----@param runEvent fun(event:Event) callback to run.  will receive the same event as provided
-function Zebug:runEvent(event, runEvent, ...)
-    local width = event.indent or 20
+local function _runEvent(self, showStart, event, runEvent, ...)
+    local width = event.indent or 0
     if not self.methodName then
         self.methodName = "runEvent"
     end
@@ -292,7 +290,9 @@ function Zebug:runEvent(event, runEvent, ...)
     local zOwner = self.zOwner
 
     local startTime = GetTimePreciseSec()
-    self:event(event, START):out(width, "=",START, tFormat3(startTime), ...)
+    if showStart then
+        self:event(event, START):noName():out(width, "=",START, tFormat3(startTime), ...)
+    end
     runEvent(event)
     local endTime = GetTimePreciseSec()
 
@@ -300,8 +300,21 @@ function Zebug:runEvent(event, runEvent, ...)
     self.markers = markers
     self.methodName = methodName
     self.zOwner = zOwner
-    self:event(event, END):out(width, "=",END, tFormat3(endTime), "elapsed time", nFormat3(endTime-startTime),  ...)
+    self:event(event, END):noName():out(width, "=",END, tFormat3(endTime), "elapsed time", nFormat3(endTime-startTime),  ...)
 end
+
+---@param event Event
+---@param runEvent fun(event:Event) callback to run.  will receive the same event as provided
+function Zebug:runEvent(event, runEvent, ...)
+    _runEvent(self, true, event, runEvent, ...)
+end
+
+---@param event Event
+---@param runEvent fun(event:Event) callback to run.  will receive the same event as provided
+function Zebug:runEventTerse(event, runEvent, ...)
+    _runEvent(self, false, event, runEvent, ...)
+end
+
 
 ---@return Zebuggers -- IntelliJ-EmmyLua annotation
 function Zebug:new(lowestAllowedSpeakingVolume)
@@ -484,6 +497,11 @@ function Zebug:owner(caller)
     return self
 end
 
+function Zebug:noName()
+    self.suppressMethodName = true
+    return self
+end
+
 -- for any given set of values provided for squeakyWheelId
 -- the first one is recorded and all others will be silenced.
 -- Useful for multiple instances of a class which otherwise
@@ -590,6 +608,7 @@ function Zebug:out(indentWidth, indentChar, ...)
 
     local file, method, line, eventName, eMsg, owner = self:getHeader()
     local speakingVolumeMsg = SPEAKING_VOLUMES_NAMES[self.mySpeakingVolume]
+    local shoName = not self.suppressMethodName
 
     local out1 = {
         self:colorize(PREFIX),
@@ -605,18 +624,6 @@ function Zebug:out(indentWidth, indentChar, ...)
 
     local outMarkers = self:roundUpAllTheMarkers()
 
---[[
-        self.markers and self.markers[RaidMarker.STAR] or "",
-        self.markers and self.markers[RaidMarker.CIRCLE] or "",
-        self.markers and self.markers[RaidMarker.DIAMOND] or "",
-        self.markers and self.markers[RaidMarker.TRIANGLE] or "",
-        self.markers and self.markers[RaidMarker.MOON] or "",
-        self.markers and self.markers[RaidMarker.SQUARE] or "",
-        self.markers and self.markers[RaidMarker.CROSS] or "",
-        self.markers and self.markers[RaidMarker.SKULL] or "",
-        isTableNotEmpty(self.markers) and " " or "",
-]]
-
     local out3 = {
         indent,
         " ",
@@ -625,12 +632,12 @@ function Zebug:out(indentWidth, indentChar, ...)
         --eventName and "|r" or "", -- end event color
         self:stopColor(), -- end event color
 
-        file,
-        method and ":" or "",
-        method,
+        shoName and file or "",
+        shoName and method and ":" or "",
+        shoName and method or "",
 
-        line,
-        " ",
+        shoName and line or "",
+        shoName and " " or "",
 
         self:startColor(), -- start debug level color
 
@@ -683,6 +690,7 @@ function Zebug:out(indentWidth, indentChar, ...)
     self.zEventMsg = nil
     self.methodName = nil
     self.mySqueakyWheelId = nil
+    self.suppressMethodName = nil
     return self
 end
 
