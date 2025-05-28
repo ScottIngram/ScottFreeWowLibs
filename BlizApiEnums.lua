@@ -100,6 +100,7 @@ FrameType = {
 Script = {
     ON_LOAD              = "OnLoad", --func(self) - object is created.
     ON_HIDE              = "OnHide", --func(self) - widget's visibility changes to hidden.
+    ON_SHOW              = "OnShow", --func(self) - widget's visibility changes to NOT hidden.
     ON_ENTER             = "OnEnter", --func(self, motion) - cursor enters the widget's interactive area.
     ON_LEAVE             = "OnLeave", --func(self, motion) - mouse cursor leaves the widget's interactive area.
     ON_MOUSE_DOWN        = "OnMouseDown", --func(self, button) - mouse button is pressed while the cursor is over the widget.
