@@ -19,6 +19,9 @@
 -- TODO: zebug:wrapAllMethods(MyClassFoo) - wraps all of a class' methods. the wrapper provides a zebugger pre-populated with its
 -- method name, call stack depth (to be used with auto-indentation), etc?
 -- and can assign individual methods with custom speaking volumes based on some class config = { getFoo = INFO, setBar = TRACE, default = WARN }
+--
+-- TODO: use ChatFrame_AddMessage or ChatFrame_AddText for output.  maybe create a Zebug_Chat_Frame?
+
 
 local ADDON_NAME, ADDON_SYMBOL_TABLE = ...
 ADDON_SYMBOL_TABLE.Wormhole() -- Lua voodoo magic that replaces the current Global namespace with the Ufo
@@ -115,7 +118,7 @@ function Event:getFullName()
 end
 
 function Event:toString()
-    return self:getFullName()
+    return sprintf("<Event %s>", self:getFullName())
 end
 
 ---@class Zebug -- IntelliJ-EmmyLua annotation
