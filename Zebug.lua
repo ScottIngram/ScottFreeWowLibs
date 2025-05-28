@@ -140,6 +140,7 @@ end
 ---@field ERROR ZebugSpeakingVolume
 ---@field NONE ZebugSpeakingVolume
 Zebug = {
+    MUTE  = -10, -- TODO: fix ambiguity
     TRACE = SPEAKING_VOLUME.TRACE,
     INFO  = SPEAKING_VOLUME.INFO,
     WARN  = SPEAKING_VOLUME.WARN,
