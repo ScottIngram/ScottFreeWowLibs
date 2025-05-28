@@ -603,7 +603,7 @@ function Zebug:out(indentWidth, indentChar, ...)
         eventName and "] " or "",
     }
 
-    local out2 = self:roundUpAllTheMarkers()
+    local outMarkers = self:roundUpAllTheMarkers()
 
 --[[
         self.markers and self.markers[RaidMarker.STAR] or "",
@@ -651,21 +651,28 @@ function Zebug:out(indentWidth, indentChar, ...)
         if isOdd then
             -- table.insert(out, " .. ")
             --table.insert(out, self:asString(v))
-            out1[#out1 +1] = self:asString(v)
+            out3[#out3 +1] = self:asString(v)
         else
-            out1[#out1 +1] =  ": "
-            out1[#out1 +1] =  self:asString(v)
+            out3[#out3 +1] =  ": "
+            out3[#out3 +1] =  self:asString(v)
             if i~= args.n then
-                out1[#out1 +1] =  " .. "
+                out3[#out3 +1] =  " .. "
             end
         end
     end
 
-    print(
-            table.concat(out1,""),
-            out2 and table.concat(out2,""),
-            table.concat(out3,"")
-    )
+    if outMarkers then
+        print(
+                table.concat(out1,""),
+                table.concat(outMarkers,""),
+                table.concat(out3,"")
+        )
+    else
+        print(
+                table.concat(out1,""),
+                table.concat(out3,"")
+        )
+    end
 
     if isTableNotEmpty(self.markers) then
         self.markers = nil
