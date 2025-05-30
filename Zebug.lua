@@ -98,10 +98,16 @@ function Event:new(owner, name, count, mySpeakingVolume, indent)
         mySpeakingVolume = mySpeakingVolume,
         color = c,
         colorOpener = co,
+        ufoType="Event",
+--[[
         getFullName=Event.getFullName,
         toString=Event.toString,
+        muteUnlessKing=Event.muteUnlessKing,
+        unMute=Event.unMute,
+]]
     }
 
+    setmetatable(self, { __index = Event })
     UfoMixIn.installMyToString(self)
 
     return self
