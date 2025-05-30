@@ -62,6 +62,7 @@ local SPEAKING_VOLUMES_NAMES = {
 ---@field indent number
 ---@field count number
 ---@field name string
+---@field _king string
 ---@field dynamicName boolean true if name is a function
 ---@field owner any the class/object responsible for deploying the event
 ---@field mySpeakingVolume ZebugSpeakingVolume
@@ -125,6 +126,29 @@ end
 
 function Event:toString()
     return sprintf("<Event %s>", self:getFullName())
+end
+
+function Event:king(king)
+    self._king = king
+end
+
+---@param germ Germ
+function Event:muteUnlessKing(germ)
+    --assert(self._king, "you haven't set a king so this method call is probably a mistake.")
+    local label = (germ.getLabel and germ:getLabel()) or "NoLaBeL"
+    --print("e:MUK", "ufoType =(", germ.ufoType, ")", germ, germ:toString(), "label =", label, "- king =",self._king)
+    if self._king and (self._king == label) then
+        if not self.OLD_mySpeakingVolume then
+            self.OLD_mySpeakingVolume = self.mySpeakingVolume
+        end
+        self.mySpeakingVolume = -10
+    end
+end
+
+function Event:unMute()
+    if not self.OLD_mySpeakingVolume then return end
+    self.mySpeakingVolume = self.OLD_mySpeakingVolume
+    self.OLD_mySpeakingVolume = nil
 end
 
 ---@class Zebug -- IntelliJ-EmmyLua annotation

@@ -7,7 +7,7 @@
 
 local ADDON_NAME, ADDON_SYMBOL_TABLE = ...
 ADDON_SYMBOL_TABLE.Wormhole()
-local zebug = Zebug:new(Zebug.TRACE)
+local zebug = Zebug:new(Zebug.WARN)
 
 ---@class Pacifier
 ---@field id string a unique identifier to ensure the same func doesn't get queued more than once
