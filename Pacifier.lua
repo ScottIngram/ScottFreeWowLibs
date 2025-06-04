@@ -27,12 +27,13 @@ local queue = {}
 -- Methods
 -------------------------------------------------------------------------------
 
-function Pacifier:pacify(owner, funcName)
+function Pacifier:pacify(owner, funcName, userMsg)
     local func = owner[funcName]
     local callCounter = 0
     local ownersLabel = ((owner.getLabel and owner:getLabel()) or tostring(owner))
     local label = ownersLabel .. "->" .. funcName
 
+    local alreadySaidMsg
     local wrapped
     wrapped = function(a,b,c,d,e)
         -- yeah, sorry about the vararg travesty, but, the above's "..." wouldn't be visible to the C_Timer function() and I don't want to incur the cost of pack/unpack
@@ -43,9 +44,13 @@ function Pacifier:pacify(owner, funcName)
 
             -- FUNC START
             C_Timer.After(MAX_FREQUENCY, function()
-                if takeUhNumber == callCounter then
+                if true or (takeUhNumber == callCounter) then
                     -- invoke the original function and pass in the "..." from the "wrapped" call, not the C_Timer call
                     zebug.trace:owner(label):out(3, div, "IN COMBAT... delaying AGAIN. callCounter",callCounter, "takeUhNumber",takeUhNumber)
+                    if userMsg and not alreadySaidMsg then
+                        alreadySaidMsg = true
+                        msgUser(L10N.WAITING_UNTIL_COMBAT_ENDS .. userMsg)
+                    end
                     wrapped(a,b,c,d,e)
                 else
                     zebug.trace:owner(label):out(3, div, "limbo... DISCARD OLD CALL! callCounter",callCounter, "takeUhNumber",takeUhNumber)
@@ -55,6 +60,10 @@ function Pacifier:pacify(owner, funcName)
         else
             zebug.trace:owner(label):out(3, div, "no combat... executing. callCounter",callCounter)
             func(a,b,c,d,e)
+            if userMsg and alreadySaidMsg then
+                alreadySaidMsg = nil
+                msgUser(L10N.COMBAT_HAS_ENDED_SO_WE_CAN_NOW .. userMsg)
+            end
         end
     end
 
