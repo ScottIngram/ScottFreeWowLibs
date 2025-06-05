@@ -100,12 +100,6 @@ function Event:new(owner, name, count, mySpeakingVolume, indent)
         color = c,
         colorOpener = co,
         ufoType="Event",
---[[
-        getFullName=Event.getFullName,
-        toString=Event.toString,
-        muteUnlessKing=Event.muteUnlessKing,
-        unMute=Event.unMute,
-]]
     }
 
     setmetatable(self, { __index = Event })
@@ -191,6 +185,7 @@ local PREFIX = "<" .. ADDON_NAME .. ">"
 local DEFAULT_INDENT_CHAR = "#"
 local DEFAULT_INDENT_WIDTH = 0
 local MUTE_INSTANCE
+local IS_MUTE = "IS_MUTE"
 
 local COLORS = { }
 COLORS[SPEAKING_VOLUME.TRACE] = GetClassColorObj("WARRIOR")
@@ -308,10 +303,12 @@ local function newInstance(mySpeakingVolume, lowestAllowedSpeakingVolume, shared
     return self
 end
 
-local function _runEvent(self, showStart, event, runEvent, ...)
+local function _runEvent(self, showStart, event, callback, ...)
+    event = event or self.zEvent
+
     local width = event.indent or 0
     if not self.methodName then
-        self.methodName = "runEvent"
+        self.methodName = "callback"
     end
 
     -- remember these for later
@@ -321,30 +318,28 @@ local function _runEvent(self, showStart, event, runEvent, ...)
 
     local startTime = GetTimePreciseSec()
     if showStart then
-        self:event(event, START):noName():out(width, "=",START, tFormat3(startTime), ...)
+        _eventStart(self, event):noName():out(width, "=",START, tFormat3(startTime), ...)
     end
-    runEvent(event)
+    callback(event)
     local endTime = GetTimePreciseSec()
 
     -- put these back coz they get cleared on every output
     self.markers = markers
     self.methodName = methodName
     self.zOwner = zOwner
-    self:event(event, END):noName():out(width, "=",END, tFormat3(endTime), "elapsed time", nFormat3(endTime-startTime),  ...)
+    _eventEnd(self, event):noName():out(width, "=",END, tFormat3(endTime), "elapsed time", nFormat3(endTime-startTime),  ...)
+end
+
+---@param callback fun(event:Event) callback to run.  will receive the same event as provided
+function Zebug:run(callback, ...)
+    _runEvent(self, true, self.zEvent, callback, ...)
 end
 
 ---@param event Event
----@param runEvent fun(event:Event) callback to run.  will receive the same event as provided
-function Zebug:runEvent(event, runEvent, ...)
-    _runEvent(self, true, event, runEvent, ...)
+---@param callback fun(event:Event) callback to run.  will receive the same event as provided
+function Zebug:runTerse(callback, ...)
+    _runEvent(self, false, self.zEvent, callback, ...)
 end
-
----@param event Event
----@param runEvent fun(event:Event) callback to run.  will receive the same event as provided
-function Zebug:runEventTerse(event, runEvent, ...)
-    _runEvent(self, false, event, runEvent, ...)
-end
-
 
 ---@return Zebuggers -- IntelliJ-EmmyLua annotation
 function Zebug:new(lowestAllowedSpeakingVolume)
@@ -402,7 +397,11 @@ end
 
 function Zebug:isMute()
     assert(isZebuggerObj(self), ERR_MSG)
+    if (self.zEvent == IS_MUTE) then
+        return true
+    end
     local speakingVolume = (isEventObj(self.zEvent) and self.zEvent.mySpeakingVolume) or self.mySpeakingVolume
+
     return speakingVolume < self.lowestAllowedSpeakingVolume
 end
 
@@ -508,13 +507,33 @@ function Zebug:ifThen(conditional)
 end
 
 ---@param event string|Event metadata describing the instigating event - good for debugging
-function Zebug:event(event, msg)
+function Zebug:event(event)
     assert(event,"can't set nil event!") -- TODO: replace with event = event or UNKNOWN_EVENT
     --assert(isTable(event),"event obj must be a table!")
     --assert(event.getFullName,"provided param is not actually an Event object!")
     self.zEvent = event
-    self.zEventMsg = msg
     return self
+end
+
+---@param event string|Event metadata describing the instigating event - good for debugging
+function Zebug:newEvent(owner, name, count, mySpeakingVolume, indent)
+    if self:isMute() then
+        -- save CPU cycles when mute
+        self.zEvent = IS_MUTE
+    else
+        self.zEvent = Event:new(owner, name, count, mySpeakingVolume, indent)
+    end
+    return self
+end
+
+function _eventStart(self, event)
+    self.zEventMsg = START
+    return self:event(event)
+end
+
+function _eventEnd(self, event)
+    self.zEventMsg = END
+    return self:event(event)
 end
 
 ---@param caller any a unique identifier, e.g. self or "ID123"
@@ -585,7 +604,10 @@ local UP_ARROW   = "`````^^^^^AAAAA^^^^^`````"
 ---@return Zebug -- IntelliJ-EmmyLua annotation
 function Zebug:dumpy(label, ...)
     assert(isZebuggerObj(self), ERR_MSG)
-    if self:isMute() then return end
+    if self:isMute() then
+        self:clearLineVars()
+        return
+    end
     self:out(2,DOWN_ARROW, label, DOWN_ARROW)
     DevTools_Dump(...)
     self:out(2,UP_ARROW, label, UP_ARROW)
@@ -595,8 +617,10 @@ end
 ---@return Zebug -- IntelliJ-EmmyLua annotation
 function Zebug:print(...)
     assert(isZebuggerObj(self), ERR_MSG)
-    if self:isMute() then return end
-    --if not self.caller then self.caller = getfenv(2) end
+    if self:isMute() then
+        self:clearLineVars()
+        return
+    end
 
     self:line(self.sharedData.indentWidth, ...)
 
@@ -608,8 +632,10 @@ end
 ---@param indentWidth number how many characters wide is the header
 function Zebug:line(indentWidth, ...)
     assert(isZebuggerObj(self), ERR_MSG)
-    if self:isMute() then return end
-    --if not self.caller then self.caller = getfenv(2) end
+    if self:isMute() then
+        self:clearLineVars()
+        return
+    end
 
     self:out(indentWidth, self.sharedData.indentChar, ...)
 
@@ -622,7 +648,10 @@ end
 ---@param indentChar string will be used to compose the header
 function Zebug:out(indentWidth, indentChar, ...)
     assert(isZebuggerObj(self), ERR_MSG)
-    if self:isMute() then return end
+    if self:isMute() then
+        self:clearLineVars()
+        return
+    end
     --if not self.caller then self.caller = getfenv(2) end
 
     --print("Zebug:out() calledBy-->", debugstack(2,4,0) )
@@ -714,6 +743,8 @@ function Zebug:out(indentWidth, indentChar, ...)
     if isTableNotEmpty(self.markers) then
         self.markers = nil
     end
+    self:clearLineVars()
+--[[
     self.caller = nil
     self.zOwner = nil
     self.zEvent = nil
@@ -721,7 +752,18 @@ function Zebug:out(indentWidth, indentChar, ...)
     self.methodName = nil
     self.mySqueakyWheelId = nil
     self.suppressMethodName = nil
+]]
     return self
+end
+
+function Zebug:clearLineVars()
+    self.caller = nil
+    self.zOwner = nil
+    self.zEvent = nil
+    self.zEventMsg = nil
+    self.methodName = nil
+    self.mySqueakyWheelId = nil
+    self.suppressMethodName = nil
 end
 
 function Zebug:roundUpAllTheMarkers()
@@ -818,7 +860,10 @@ end
 function Zebug:messengerForEvent(eventName, msg)
     assert(isZebuggerObj(self), ERR_MSG)
     return function(obj)
-        if self:isMute() then return end
+        if self:isMute() then
+            self:clearLineVars()
+            return
+        end
         self:print(getName(obj,eventName).." said ".. msg .."! ")
     end
 end
@@ -831,15 +876,12 @@ function Zebug:makeDummyStubForCallback(obj, eventName, msg)
 
 end
 
-function Zebug:run(callback)
-    assert(isZebuggerObj(self), ERR_MSG)
-    if self:isMute() then return end
-    callback()
-end
-
 function Zebug:dumpKeys(object)
     assert(isZebuggerObj(self), ERR_MSG)
-    if self:isMute() then return end
+    if self:isMute() then
+        self:clearLineVars()
+        return
+    end
     if not object then
         self:print("NiL")
         return
