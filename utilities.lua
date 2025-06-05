@@ -437,6 +437,10 @@ function isNil(obj)
     return type(obj) == "nil"
 end
 
+function nilStr(v)
+    return v or "nil"
+end
+
 function nFormat3(n)
     return string.format("%.3f", n or 0)
 end
