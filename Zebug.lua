@@ -305,6 +305,7 @@ end
 
 local function _runEvent(self, showStart, event, callback, ...)
     event = event or self.zEvent
+    local funcRestorePreviousGlobalEvent = zebug:setGlobalEvent(event)
 
     local width = event.indent or 0
     if not self.methodName then
@@ -328,6 +329,7 @@ local function _runEvent(self, showStart, event, callback, ...)
     self.methodName = methodName
     self.zOwner = zOwner
     _eventEnd(self, event):noName():out(width, "=",END, tFormat3(endTime), "elapsed time", nFormat3(endTime-startTime),  ...)
+    funcRestorePreviousGlobalEvent()
 end
 
 ---@param callback fun(event:Event) callback to run.  will receive the same event as provided
@@ -508,6 +510,7 @@ end
 
 ---@param event string|Event metadata describing the instigating event - good for debugging
 function Zebug:event(event)
+    event = event or ADDON_SYMBOL_TABLE.eventBridge
     assert(event,"can't set nil event!") -- TODO: replace with event = event or UNKNOWN_EVENT
     --assert(isTable(event),"event obj must be a table!")
     --assert(event.getFullName,"provided param is not actually an Event object!")
@@ -534,6 +537,15 @@ end
 function _eventEnd(self, event)
     self.zEventMsg = END
     return self:event(event)
+end
+
+-- useful when the execution thread passes through code that doesn't explicitly pass the event to the next method()
+---@param event string|Event metadata describing the instigating event - good for debugging
+---@return function a function that will restore the GlobalEvent to what it was before
+function Zebug:setGlobalEvent(event)
+    local oldEventBridge = ADDON_SYMBOL_TABLE.eventBridge
+    ADDON_SYMBOL_TABLE.eventBridge = event
+    return function() ADDON_SYMBOL_TABLE.eventBridge = oldEventBridge  end
 end
 
 ---@param caller any a unique identifier, e.g. self or "ID123"
@@ -648,6 +660,11 @@ end
 ---@param indentChar string will be used to compose the header
 function Zebug:out(indentWidth, indentChar, ...)
     assert(isZebuggerObj(self), ERR_MSG)
+
+    if not self.zEvent then
+        self.zEvent = ADDON_SYMBOL_TABLE.eventBridge
+    end
+
     if self:isMute() then
         self:clearLineVars()
         return
