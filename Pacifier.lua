@@ -28,7 +28,12 @@ local queue = {}
 -------------------------------------------------------------------------------
 
 function Pacifier:pacify(owner, funcName, userMsg)
+    assert(owner, "owner arg is nil")
+    assert(funcName, "funcName arg is nil")
     local func = owner[funcName]
+    if not func then
+        error("owner ".. ((owner.toString and owner:toString()) or owner.ufoType or tostring(owner)) .. " does not have an entry corresponding to funcName = " .. tostring(funcName) )
+    end
     local callCounter = 0
     local ownersLabel = ((owner.getLabel and owner:getLabel()) or tostring(owner))
     local label = ownersLabel .. "->" .. funcName
