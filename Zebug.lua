@@ -544,8 +544,12 @@ end
 ---@return function a function that will restore the GlobalEvent to what it was before
 function Zebug:setGlobalEvent(event)
     local oldEventBridge = ADDON_SYMBOL_TABLE.eventBridge
+    --print("overwriting ADDON_SYMBOL_TABLE.eventBridge = ",ADDON_SYMBOL_TABLE.eventBridge, " and setting it to event -->", event)
     ADDON_SYMBOL_TABLE.eventBridge = event
-    return function() ADDON_SYMBOL_TABLE.eventBridge = oldEventBridge  end
+    return function()
+        --print("erasing ADDON_SYMBOL_TABLE.eventBridge = ",ADDON_SYMBOL_TABLE.eventBridge, " and restoring oldEventBridge -->", oldEventBridge)
+        ADDON_SYMBOL_TABLE.eventBridge = oldEventBridge
+    end
 end
 
 ---@param caller any a unique identifier, e.g. self or "ID123"
@@ -661,8 +665,9 @@ end
 function Zebug:out(indentWidth, indentChar, ...)
     assert(isZebuggerObj(self), ERR_MSG)
 
-    if not self.zEvent then
+    if not self.zEvent and ADDON_SYMBOL_TABLE.eventBridge ~= IS_MUTE then
         self.zEvent = ADDON_SYMBOL_TABLE.eventBridge
+        --print("zzzeeebbbuuuggg ADDON_SYMBOL_TABLE.eventBridge = ", ADDON_SYMBOL_TABLE.eventBridge)
     end
 
     if self:isMute() then
