@@ -19,10 +19,9 @@ Pacifier = { }
 -- class variables - shared between all instances
 -------------------------------------------------------------------------------
 
-local div = "ß"
+local div = "+"
 local MAX_FREQUENCY = 1 -- second
 
-local queue = {}
 -------------------------------------------------------------------------------
 -- Methods
 -------------------------------------------------------------------------------
@@ -34,11 +33,24 @@ function Pacifier:pacify(owner, funcName, userMsg)
     if not func then
         error("owner ".. ((owner.toString and owner:toString()) or owner.ufoType or tostring(owner)) .. " does not have an entry corresponding to funcName = " .. tostring(funcName) )
     end
-    local callCounter = 0
+
     local ownersLabel = ((owner.getLabel and owner:getLabel()) or tostring(owner))
     local label = ownersLabel .. "->" .. funcName
 
+    return self:wrap(func, userMsg, label)
+end
+
+function Pacifier:wrap(func, userMsg, label)
+    assert(func, "func arg is nil")
+    label = label or userMsg
+
+    -- "instance" variables - shared between all invocations of a single pacified method
     local alreadySaidMsg
+    local callCounter = 0
+    local userMsgOriginal = userMsg
+
+    local msgRestore = function() userMsg = userMsgOriginal end
+
     local wrapped
     wrapped = function(a,b,c,d,e)
         -- yeah, sorry about the vararg travesty, but, the above's "..." wouldn't be visible to the C_Timer function() and I don't want to incur the cost of pack/unpack
@@ -49,9 +61,9 @@ function Pacifier:pacify(owner, funcName, userMsg)
 
             -- FUNC START
             C_Timer.After(MAX_FREQUENCY, function()
-                if true or (takeUhNumber == callCounter) then
+                if true or (takeUhNumber == callCounter) then -- decided to never discard subsequent calls
                     -- invoke the original function and pass in the "..." from the "wrapped" call, not the C_Timer call
-                    zebug.trace:owner(label):out(3, div, "IN COMBAT... delaying AGAIN. callCounter",callCounter, "takeUhNumber",takeUhNumber)
+                    zebug.trace:owner(label):out(3, div, "IN COMBAT... delaying AGAIN. callCounter",callCounter, "alreadySaidMsg", alreadySaidMsg, "userMsg",userMsg)
                     if userMsg and not alreadySaidMsg then
                         alreadySaidMsg = true
                         msgUser(L10N.WAITING_UNTIL_COMBAT_ENDS .. userMsg)
@@ -63,12 +75,14 @@ function Pacifier:pacify(owner, funcName, userMsg)
             end)
             -- FUNC END
         else
-            zebug.trace:owner(label):out(3, div, "no combat... executing. callCounter",callCounter)
-            func(a,b,c,d,e)
+            zebug.trace:owner(label):out(3, div, "no combat... executing. callCounter",callCounter, "alreadySaidMsg", alreadySaidMsg, "userMsg",userMsg)
             if userMsg and alreadySaidMsg then
                 alreadySaidMsg = nil
-                msgUser(L10N.COMBAT_HAS_ENDED_SO_WE_CAN_NOW .. userMsg)
+                msgUser(L10N.COMBAT_HAS_ENDED_SO_NOW_WE_CAN .. userMsg)
+                userMsg = nil -- because there may be a BUNCH of repeated invocations lined up in the C_Timer nether, don't let those spam the msg to the user
+                C_Timer.After(2, msgRestore) -- give them time to finish before putting the msg back
             end
+            func(a,b,c,d,e)
         end
     end
 
