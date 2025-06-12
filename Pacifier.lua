@@ -20,113 +20,85 @@ Pacifier = { }
 -------------------------------------------------------------------------------
 
 local div = "+"
-local MAX_FREQUENCY = 1 -- second
+local POLLING_FREQUENCY = 0.125
+local queue = {}
+local counter = 0
+local isPolling = false
 
 -------------------------------------------------------------------------------
 -- Methods
 -------------------------------------------------------------------------------
 
-function Pacifier:pacify(owner, funcName, userMsg)
-    assert(owner, "owner arg is nil")
-    assert(funcName, "funcName arg is nil")
-    local func = owner[funcName]
-    if not func then
-        error("owner ".. ((owner.toString and owner:toString()) or owner.ufoType or tostring(owner)) .. " does not have an entry corresponding to funcName = " .. tostring(funcName) )
-    end
-
-    local ownersLabel = ((owner.getLabel and owner:getLabel()) or tostring(owner))
-    local label = ownersLabel .. "->" .. funcName
-
-    return self:wrap(func, userMsg, label)
-end
-
-function Pacifier:wrap(func, userMsg, label)
+---@return function the incoming func that has now been wrapped so that it will be postponed until combat (if any) ends
+---@param func function a call that would cause problems if it were to execute during combat
+---@param userMsg string|nil names/describes the action.  if provided, will be included in a larger message displayed to the user explaining why the action is being delayed.
+function Pacifier:wrap(func, userMsg)
     assert(func, "func arg is nil")
-    label = label or userMsg
 
     -- "instance" variables - shared between all invocations of a single pacified method
     local alreadySaidMsg
-    local callCounter = 0
     local userMsgOriginal = userMsg
 
-    local msgRestore = function() userMsg = userMsgOriginal end
+    local wrapped = function(...)
+        if isInCombatLockdownQuiet(userMsg) then
+            zebug.trace:owner(userMsg):out(3, div, "IN COMBAT... queueing.")
 
-    local wrapped
-    wrapped = function(a,b,c,d,e)
-        -- yeah, sorry about the vararg travesty, but, the above's "..." wouldn't be visible to the C_Timer function() and I don't want to incur the cost of pack/unpack
-        if isInCombatLockdownQuiet(label) then
-            callCounter = callCounter + 1
-            local takeUhNumber = callCounter
-            zebug.trace:owner(label):out(3, div, "IN COMBAT... delaying. callCounter",callCounter, "takeUhNumber",takeUhNumber)
-
-            -- FUNC START
-            C_Timer.After(MAX_FREQUENCY, function()
-                if true or (takeUhNumber == callCounter) then -- decided to never discard subsequent calls
-                    -- invoke the original function and pass in the "..." from the "wrapped" call, not the C_Timer call
-                    zebug.trace:owner(label):out(3, div, "IN COMBAT... delaying AGAIN. callCounter",callCounter, "alreadySaidMsg", alreadySaidMsg, "userMsg",userMsg)
-                    if userMsg and not alreadySaidMsg then
-                        alreadySaidMsg = true
-                        msgUser(L10N.WAITING_UNTIL_COMBAT_ENDS .. userMsg)
-                    end
-                    wrapped(a,b,c,d,e)
-                else
-                    zebug.trace:owner(label):out(3, div, "limbo... DISCARD OLD CALL! callCounter",callCounter, "takeUhNumber",takeUhNumber)
-                end
-            end)
-            -- FUNC END
-        else
-            zebug.trace:owner(label):out(3, div, "no combat... executing. callCounter",callCounter, "alreadySaidMsg", alreadySaidMsg, "userMsg",userMsg)
-            if userMsg and alreadySaidMsg then
-                alreadySaidMsg = nil
-                msgUser(L10N.COMBAT_HAS_ENDED_SO_NOW_WE_CAN .. userMsg)
-                userMsg = nil -- because there may be a BUNCH of repeated invocations lined up in the C_Timer nether, don't let those spam the msg to the user
-                C_Timer.After(2, msgRestore) -- give them time to finish before putting the msg back
+            -- if the user spams the action, display the message only the first time
+            if userMsg and not alreadySaidMsg then
+                alreadySaidMsg = true
+                msgUser(L10N.WAITING_UNTIL_COMBAT_ENDS .. userMsg)
             end
-            func(a,b,c,d,e)
+
+            -- put the func call into a queue to be performed only once combat ends
+            local packedArgs = {...}
+            local callback = function()
+                counter = counter + 1
+                zebug.info:owner(userMsgOriginal):out(3, div, "combat ended... executing. counter",counter, " alreadySaidMsg", alreadySaidMsg, "userMsgOriginal",userMsgOriginal, "userMsg",userMsg)
+                if userMsg and alreadySaidMsg then
+                    alreadySaidMsg = false
+                    msgUser(L10N.COMBAT_HAS_ENDED_SO_NOW_WE_CAN .. userMsg)
+                end
+                -- invoke the original, unwrapped function
+                func(unpack(packedArgs))
+            end
+
+            queue[#queue + 1] = callback
+            startAmyPoller(userMsgOriginal)
+        else
+            -- don't queue. execute immediately
+            func(...)
         end
     end
 
     return wrapped
 end
 
----@param id string a unique identifier to ensure the same func doesn't get queued more than once
----@return Pacifier - a new instance of Pacifier dedicated to executing the given funtion but only when combat has stopped
-function Pacifier:new(id)
-    local self = deepcopy(self, {
-        id = tostring(id or "CACOPHONY"),
-    })
-    
-    zebug.trace:ifMe1st(self.id):out(5,div, "I'm the first ID",id)
-    
-    return self
+function startAmyPoller(msg)
+    if not isPolling then
+        isPolling = true
+        amyPoller(msg)
+    end
 end
 
--- delay a function call so that it is only executed outside of combat.
--- any previous function calls are discarded in deference to the most recent.
--- if subsequent requests happen during the same window, ensure only the first one is re-queued.
----@param func function the command to execute once combat has ended
-function Pacifier:exe(func, reQueue)
-    self.mostRecentFunc = func -- the func included in the most recent invocation replaces any previous one
-    local qId = self.id
-
-    if isInCombatLockdownQuiet(qId) then
-        if self.isWaiting then
-            zebug.trace:out(3, div, "IN COMBAT and also already waiting", qId)
-            if reQueue then
-                self:exe(self.mostRecentFunc, true)
-            end
-        else
-            zebug.trace:out(3, div, "IN COMBAT so postponing", qId)
-            self.isWaiting = true
-            C_Timer.After(MAX_FREQUENCY, function()
-                zebug.trace:out(3, div, "maybe combat, so trying", qId)
-                self:exe(self.mostRecentFunc, true)
-                zebug.trace:out(3, div, "maybe combat, so tried ", qId)
-            end)
-        end
+-- loop until combat ends
+function amyPoller(msg)
+    if isInCombatLockdownQuiet(msg or "Some combat sensitive action") then
+        C_Timer.After(POLLING_FREQUENCY, amyPoller)
     else
-        zebug.trace:out(3, div, "no combat so immediately executing ->", qId)
-        self.isWaiting = false
-        self.mostRecentFunc()
+        consumeQueue()
     end
+end
+
+function consumeQueue()
+    if not queue then return end
+
+    -- perform the function calls in the order they were received.
+    -- time each function call so they spread evenly over 1 second
+    local delay = 1.0 / #queue
+    for i, func in ipairs(queue) do
+        C_Timer.After(delay * i, func)
+    end
+
+    queue = {} -- because table.clear(queue) isn't a thing in WoW's lua
+    isPolling = false
 end
