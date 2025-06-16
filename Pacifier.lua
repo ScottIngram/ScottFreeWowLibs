@@ -99,6 +99,7 @@ function consumeQueue()
         C_Timer.After(delay * i, func)
     end
 
-    queue = {} -- because table.clear(queue) isn't a thing in WoW's lua
+    --queue = {} -- because table.clear(queue) isn't a thing in WoW's lua
+    wipe(queue)
     isPolling = false
 end
