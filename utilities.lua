@@ -48,7 +48,7 @@ function registerSlashCmd(cmdName, callbacks)
             msgUser(L10N.SLASH_UNKNOWN_COMMAND .. ": \"".. arg .."\"")
         else
             msgUser(arg .."...")
-            local func = cmd.fnc
+            local func = cmd.fnc or cmd.func
             func()
         end
     end
