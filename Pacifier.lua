@@ -96,7 +96,15 @@ function consumeQueue()
     -- time each function call so they spread evenly over 1 second
     local delay = 1.0 / #queue
     for i, func in ipairs(queue) do
-        C_Timer.After(delay * i, func)
+        C_Timer.After(delay * i, function()
+            if isInCombatLockdownQuiet("pacifier double-check") then
+                if i == 1 then
+                    zebug.warn:event("Combat Lockdown"):name("Pacifier"):print("Tried to delay invocation until combat ended but then combat started again.  Discarding", #queue, "delayed calls.")
+                end
+            else
+                func()
+            end
+        end)
     end
 
     --queue = {} -- because table.clear(queue) isn't a thing in WoW's lua
