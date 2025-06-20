@@ -316,7 +316,7 @@ function serializeAsAssignments(name, val, isRecurse)
 
     local typ = type(val)
     if "table" == typ then
-        tmp = tmp .. "{}" .. EOL
+        tmp = tmp .. "table.new()" .. EOL
         -- trust that if there is an index #1 then all other indices are also numbers.  Otherwise, this will fail.
         local iterFunc = val[1] and ipairs or pairs
         for k, v in iterFunc(val) do
