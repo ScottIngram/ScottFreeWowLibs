@@ -40,6 +40,25 @@ MouseClick = {
     SIX    = "Button6", -- there is no "Button6" in the API docs, so,  I've reserved this for use by my keybind code
 }
 
+MouseClickAsSecureTripe = {
+    [MouseClick.ANY]    = "type",
+    [MouseClick.LEFT]   = "type1",
+    [MouseClick.RIGHT]  = "type2",
+    [MouseClick.MIDDLE] = "type3",
+    [MouseClick.FOUR]   = "type4",
+    [MouseClick.FIVE]   = "type5",
+    [MouseClick.SIX]    = "type6",
+}
+
+MouseClickAsSecureN = {
+    [MouseClick.LEFT]   = 1,
+    [MouseClick.RIGHT]  = 2,
+    [MouseClick.MIDDLE] = 3,
+    [MouseClick.FOUR]   = 4,
+    [MouseClick.FIVE]   = 5,
+    [MouseClick.SIX]    = 6,
+}
+
 ---@class Anchor
 Anchor = {
     LEFT        = "LEFT",
