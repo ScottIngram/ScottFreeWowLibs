@@ -40,7 +40,7 @@ MouseClick = {
     SIX    = "Button6", -- there is no "Button6" in the API docs, so,  I've reserved this for use by my keybind code
 }
 
-MouseClickAsSecureTripe = {
+MouseClickAsSecEnvId = {
     [MouseClick.ANY]    = "type",
     [MouseClick.LEFT]   = "type1",
     [MouseClick.RIGHT]  = "type2",
@@ -50,7 +50,7 @@ MouseClickAsSecureTripe = {
     [MouseClick.SIX]    = "type6",
 }
 
-MouseClickAsSecureN = {
+MouseClickAsSecEnvN = {
     [MouseClick.LEFT]   = 1,
     [MouseClick.RIGHT]  = 2,
     [MouseClick.MIDDLE] = 3,
@@ -290,6 +290,13 @@ MarkTexture = {
     -- [RandoIcon.PALADIN]  = "|TINTERFACE\\WORLDSTATEFRAME\\ICONS-CLASSES:14:14:0:0:256:256:0:64:128:196|t",
     -- [RandoIcon.DEATHKNIGHT] = "|TINTERFACE\\WORLDSTATEFRAME\\ICONS-CLASSES:14:14:0:0:256:256:64:128:128:196|t",
     -- [RandoIcon.MONK]        = "|TINTERFACE\\WORLDSTATEFRAME\\ICONS-CLASSES:14:14:0:0:260:256:128:196:128:196|t",
+}
+
+
+-- a few secure environment attribute names that Bliz uses (hopefully) consistently
+---@class SecEnvAttribute
+SecEnvAttribute = {
+    flyoutDirection = "flyoutDirection",
 }
 
 -- some useful regular expressions I used to reformat raw listings into the above code
