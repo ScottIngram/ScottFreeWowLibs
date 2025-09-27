@@ -861,7 +861,7 @@ function Zebug:getHeader()
     if funcName == "?" then
         funcName = nil
     end
-    local methodName = self.methodName or funcName or "<ANON>"
+    local methodName = funcName or self.methodName or "<ANON>"
 
     return
         --[[file]]   file or "",

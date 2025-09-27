@@ -37,7 +37,11 @@ MouseClick = {
     MIDDLE = "MiddleButton",
     FOUR   = "Button4",
     FIVE   = "Button5",
-    SIX    = "Button6", -- there is no "Button6" in the API docs, so,  I've reserved this for use by my keybind code
+    KEYBIND= "Button6", -- there is no "Button6" in the API docs, so,  I've reserved this for use by my keybind code
+    SEVEN  = "Button7", -- ditto
+    EIGHT  = "Button8", -- ditto
+    NINE   = "Button9", -- ditto
+    TEN    = "Button10", -- ditto
 }
 
 MouseClickAsSecEnvId = {
@@ -47,7 +51,11 @@ MouseClickAsSecEnvId = {
     [MouseClick.MIDDLE] = "type3",
     [MouseClick.FOUR]   = "type4",
     [MouseClick.FIVE]   = "type5",
-    [MouseClick.SIX]    = "type6",
+    [MouseClick.KEYBIND] = "type6",
+    [MouseClick.SEVEN]  = "type7",
+    [MouseClick.EIGHT]  = "type8",
+    [MouseClick.NINE]   = "type9",
+    [MouseClick.TEN]    = "type10",
 }
 
 MouseClickAsSecEnvN = {
@@ -56,7 +64,11 @@ MouseClickAsSecEnvN = {
     [MouseClick.MIDDLE] = 3,
     [MouseClick.FOUR]   = 4,
     [MouseClick.FIVE]   = 5,
-    [MouseClick.SIX]    = 6,
+    [MouseClick.KEYBIND]= 6,
+    [MouseClick.SEVEN]  = 7,
+    [MouseClick.EIGHT]  = 8,
+    [MouseClick.NINE]   = 9,
+    [MouseClick.TEN]    = 10,
 }
 
 ---@class Anchor
@@ -297,6 +309,23 @@ MarkTexture = {
 ---@class SecEnvAttribute
 SecEnvAttribute = {
     flyoutDirection = "flyoutDirection",
+}
+
+---@class ModifierKey
+ModifierKey = {
+    SHIFT = "SHIFT",
+    CTRL  = "CTRL",
+    ALT   = "ALT",
+    META  = "META", -- PC
+    CMD   = "META", -- Mac terminology
+}
+
+---@class KeyModIsDown
+ModifierKeyIsDown = {
+    [ModifierKey.SHIFT] = IsShiftKeyDown,
+    [ModifierKey.CTRL ] = IsControlKeyDown,
+    [ModifierKey.ALT  ] = IsAltKeyDown,
+    [ModifierKey.META ] = IsMetaKeyDown,
 }
 
 -- some useful regular expressions I used to reformat raw listings into the above code
