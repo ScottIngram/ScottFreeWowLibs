@@ -46,7 +46,7 @@ function Pacifier:wrap(func, userMsg)
             -- if the user spams the action, display the message only the first time
             if userMsg and not alreadySaidMsg then
                 alreadySaidMsg = true
-                msgUser(L10N.WAITING_UNTIL_COMBAT_ENDS .. userMsg)
+                msgUser(L10N.WAITING_UNTIL_COMBAT_ENDS, userMsg)
             end
 
             -- put the func call into a queue to be performed only once combat ends
@@ -56,7 +56,7 @@ function Pacifier:wrap(func, userMsg)
                 zebug.info:owner(userMsgOriginal):out(3, div, "combat ended... executing. counter",counter, " alreadySaidMsg", alreadySaidMsg, "userMsgOriginal",userMsgOriginal, "userMsg",userMsg)
                 if userMsg and alreadySaidMsg then
                     alreadySaidMsg = false
-                    msgUser(L10N.COMBAT_HAS_ENDED_SO_NOW_WE_CAN .. userMsg)
+                    msgUser(L10N.COMBAT_HAS_ENDED_SO_NOW_WE_CAN, userMsg)
                 end
                 -- invoke the original, unwrapped function
                 func(unpack(packedArgs))

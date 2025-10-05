@@ -45,23 +45,28 @@ function registerSlashCmd(cmdName, callbacks)
         end
         local cmd = callbacks[arg]
         if not cmd then
-            msgUser(L10N.SLASH_UNKNOWN_COMMAND .. ": \"".. arg .."\"")
+            msgUser(L10N.SLASH_UNKNOWN_COMMAND, ": \"".. arg .."\"")
         else
-            msgUser(arg .."...")
+            msgUser(arg, "...")
             local func = cmd.fnc or cmd.func
             func()
         end
     end
 end
 
-function msgUser(msg, isOptional)
-    if isOptional and Config and Config:get("muteLogin") then return end
+function msgUser(...)
     if not ADDON_SYMBOL_TABLE.myNameInColor then
         ADDON_SYMBOL_TABLE.myNameInColor = getZebug().info:colorize(ADDON_NAME)
     end
 
-    print(ADDON_SYMBOL_TABLE.myNameInColor .. ": " .. msg)
+    print(ADDON_SYMBOL_TABLE.myNameInColor .. ": ", ...)
 end
+
+function msgUserOrNot(...)
+    if Config and Config:get("muteLogin") then return end
+    msgUser(...)
+end
+
 
 function isInCombatLockdown(actionDescription, isQuiet)
     if InCombatLockdown() then
@@ -69,7 +74,7 @@ function isInCombatLockdown(actionDescription, isQuiet)
         if isQuiet then
             getZebug().info:print(msg, " is not allowed during combat.")
         else
-            msgUser(msg .. " is not allowed during combat.", IS_OPTIONAL)
+            msgUserOrNot(msg, "is not allowed during combat.")
         end
         return true
     else
