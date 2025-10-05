@@ -813,14 +813,17 @@ function Zebug:identifyOutsideCaller()
     -- start looking at callers 3 layers away and work back until we find something non-Zebug
     local stack = debugstack(4,4,0)
     local originalStack = stack
-    local j, line, isZebug, isTail, file, n, funcName
+    local j, line, isZebug, isTail, isEllipsis, file, n, funcName, fileKeep, nKeep
     local count = 1
-    while stack do
+    while stack or exists(stack) do
         _, j = string.find(stack, "\n")
         line = string.sub(stack, 1, j)
         isZebug = string.find(line, "Zebug.lua")
         isTail = string.find(line, "tail call")
-        if isZebug or isTail then
+        isEllipsis = string.find(line, "[.][.][.]")
+        if isEllipsis then
+            stack = nil
+        elseif isZebug or isTail then
             stack = string.sub(stack, j+1)
         else
             -- the stack trace format changed in v11.1
@@ -829,14 +832,23 @@ function Zebug:identifyOutsideCaller()
             -- _,_, file, n, funcName = string.find(line,'([%w_]+)%.[^"]*"]:(%d+):%s*in function%s*.(.+).');
             if not funcName then
                 -- the parser failed so spit out some debugging info
-                print("WUT? ", originalStack)
+                print("WUT? (", stack, ")")
                 funcName = ""
             end
             if string.find(funcName, "/") then
                 -- this is an anonymous function and funcName only contains file name and line number which we already know
                 funcName = nil
+
+                -- the filename and line number are correct
+                fileKeep = file
+                nKeep = n
+
+                -- and, the correct func name may be found later in the stack, so keep looping.
+                stack = string.sub(stack, j+1)
+                --print("fileKeep",fileKeep, "nKeep",nKeep, "stack",stack)
+            else
+                stack = nil
             end
-            stack = nil
         end
 
         -- guard against an infinite loop
@@ -847,7 +859,7 @@ function Zebug:identifyOutsideCaller()
         end
     end
 
-    return file, n, funcName
+    return fileKeep or file, nKeep or n, funcName
 end
 
 ---@return Zebug -- IntelliJ-EmmyLua annotation
