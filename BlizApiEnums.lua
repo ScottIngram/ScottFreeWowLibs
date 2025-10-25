@@ -84,6 +84,35 @@ Anchor = {
     BOTTOMRIGHT = "BOTTOMRIGHT",
 }
 
+---@class AnchorOpposite
+AnchorOpposite = {
+    LEFT        = "RIGHT",
+    RIGHT       = "LEFT",
+    CENTER      = "CENTER",
+    BOTTOM      = "TOP",
+    TOP         = "BOTTOM",
+    TOPLEFT     = "BOTTOMRIGHT",
+    TOPRIGHT    = "BOTTOMLEFT",
+    BOTTOMLEFT  = "TOPRIGHT",
+    BOTTOMRIGHT = "TOPLEFT",
+}
+
+---@class AnchorAsDirection
+AnchorAsDirection = {
+    TOP    = "UP",
+    BOTTOM = "DOWN",
+    LEFT   = "LEFT",
+    RIGHT  = "RIGHT",
+}
+
+---@class DirectionAsAnchor
+DirectionAsAnchor = {
+    UP    = "TOP",
+    DOWN  = "BOTTOM",
+    LEFT  = "LEFT",
+    RIGHT = "RIGHT",
+}
+
 ---@class TooltipAnchor
 TooltipAnchor = {
     BOTTOM_LEFT = "ANCHOR_BOTTOMLEFT",
