@@ -832,7 +832,7 @@ function Zebug:identifyOutsideCaller()
             -- _,_, file, n, funcName = string.find(line,'([%w_]+)%.[^"]*"]:(%d+):%s*in function%s*.(.+).');
             if not funcName then
                 -- the parser failed so spit out some debugging info
-                print("WUT? (", stack, ")")
+                --print("WUT? (", stack, ")")
                 funcName = ""
             end
             if string.find(funcName, "/") then
