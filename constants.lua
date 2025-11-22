@@ -5,6 +5,7 @@ ADDON_SYMBOL_TABLE.Wormhole() -- Lua voodoo magic that replaces the current Glob
 QUOTE = "\""
 EOL = "\n"
 EOLx2 = "\n\n"
+EOLx3 = "\n\n\n"
 MAX_GLOBAL_MACRO_ID = 120
 DEFAULT_ICON = "INV_Misc_QuestionMark"
 DEFAULT_ICON_PRE_PATH = "INTERFACE\\ICONS\\"
