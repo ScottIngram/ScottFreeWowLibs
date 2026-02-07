@@ -17,7 +17,11 @@ local zebug = Zebug:new(Zebug.WARN)
 ---@field maxFreq number how often are we allowed to execute the function (in seconds, decimals allowed) ex 1.5
 ---@field noQueueing boolean disables the queue and simply discards any invocations that happen during the maxFreq countdown
 ---@field id string a unique identifier to ensure the same func doesn't get queued more than once
-Throttler = { }
+---@field result any value returned by the throttled function
+---@field RUN_IMMEDIATELY any flag used as return value from a throttled func to indicate failure and that no throttling should happen as a result
+Throttler = {
+    RUN_IMMEDIATELY = "RUN_IMMEDIATELY",
+}
 
 -------------------------------------------------------------------------------
 -- class variables - shared between all instances
@@ -66,7 +70,7 @@ end
 
 ---@param maxFreq number how often are we allowed to execute the function (in seconds, decimals allowed) ex 1.5
 ---@param id string a unique identifier to ensure the same func doesn't get queued more than once
----@param func function the command to execute
+---@param func function the command to execute - if it returns RUN_IMMEDIATELY, then the next execution proceeds unthrottled
 ---@return function - the same function but now limited to being called no more often than maxFreq AND at most one throttled call will enjoy a queue before exe
 function Throttler:throttle(maxFreq, id, func)
     return self:new(func, maxFreq, id):asFunc()
@@ -74,7 +78,7 @@ end
 
 ---@param maxFreq number how often are we allowed to execute the function (in seconds, decimals allowed) ex 1.5
 ---@param id string a unique identifier to ensure the same func doesn't get queued more than once
----@param func function the command to execute
+---@param func function the command to execute - if it returns RUN_IMMEDIATELY, then the next execution proceeds unthrottled
 ---@return function - the same function but now limited to being called no more often than maxFreq AND no queue for delayed calls
 function Throttler:throttleAndNoQueue(maxFreq, id, func)
     return self:new(func, maxFreq, id, true):asFunc()
@@ -90,6 +94,8 @@ function Throttler:exe(...)
 
     if reportedElapsed then -- was used in a previous version. left here in case I figure out the best way to add it back in.
         elapsed = reportedElapsed
+    elseif self.result == Throttler.RUN_IMMEDIATELY then
+        runNow = true
     elseif previousTime then
         elapsed = time() - previousTime
     else
@@ -101,7 +107,7 @@ function Throttler:exe(...)
 
     if runNow then
         zebug.info:out(10,div, "t", tFormat3(time()), "Immediately EXE", self.id, "elapsed",elapsed)
-        self:doItNow(...)
+        self.result = self:doItNow(...)
         return true
     else
         -- do it later
@@ -132,6 +138,6 @@ end
 function Throttler:doItNow(...)
     self.t0 = time() -- reset T0 to NOW!
     self.isQueued = false
-    self.func(...)
+    return self.func(...)
 end
 
