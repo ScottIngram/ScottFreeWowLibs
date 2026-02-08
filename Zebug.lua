@@ -55,6 +55,7 @@ local SPEAKING_VOLUMES_NAMES = {
     [SPEAKING_VOLUME.WARN]  = "WARN ",
     [SPEAKING_VOLUME.ERROR] = "ERROR",
 }
+ZebugVolumesNames = SPEAKING_VOLUMES_NAMES
 
 ---@class Event
 ---@field color table Bliz color object
@@ -519,9 +520,11 @@ function Zebug:event(event)
 end
 
 ---@param event string|Event metadata describing the instigating event - good for debugging
+---@param mySpeakingVolume ZebugSpeakingVolume a lower volume (such as NONE, TRACE, or INFO) will produce less debugging output. it will SUPERCEDE the volume "foo" of any zebug.foo:event(thisEvent)
 function Zebug:newEvent(owner, name, count, mySpeakingVolume, indent)
-    if self:isMute() then
+    if self:isMute() and mySpeakingVolume == nil then
         -- save CPU cycles when mute
+        -- but allow and incoming mySpeakingVolume to dynamically reset is_mute
         self.zEvent = IS_MUTE
     else
         self.zEvent = Event:new(owner, name, count, mySpeakingVolume, indent)
