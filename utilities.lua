@@ -208,6 +208,15 @@ function exists(s)
     return not isEmpty(s)
 end
 
+function isFalseEnough(v)
+    -- fuck cvar = 0 ... ohhhh, but REALLY fuck cvar = '0'
+    return v == false or v == nil or v == 0 or v == '' or v == '0' -- do I also need to include quoted "false" while I'm at it?! Whatabout "FALSE" ?
+end
+
+function isTrueEnough(v)
+    return not isFalseEnough(v)
+end
+
 function tableContainsVal(table, val)
     if not table then return false end
     assert(val ~= nil, "Can't check for nil as an array element")
