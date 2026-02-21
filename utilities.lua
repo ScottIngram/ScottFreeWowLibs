@@ -67,7 +67,6 @@ function msgUserOrNot(...)
     msgUser(...)
 end
 
-
 function isInCombatLockdown(actionDescription, isQuiet)
     if InCombatLockdown() then
         local msg = actionDescription or "That action"
@@ -127,6 +126,15 @@ function getIdForCurrentToon()
     local name, realm = UnitFullName("player") -- FU Bliz, realm is arbitrarily nil sometimes but not always
     realm = GetRealmName()
     return name.."-"..realm
+end
+
+function strjoinnilsafe(delim, ...)
+    local n = select("#", ...)
+    local s
+    for i = 1, n do
+        s = ((s and s..delim) or "") .. (select(i, ...) or "nil")
+    end
+    return s
 end
 
 -- I had to create this function to replace lua's strjoin() because
@@ -452,8 +460,10 @@ function isNil(obj)
 end
 
 function nilStr(v)
-    return v or "nil"
+    return tostring(v) --  (v and tostring(v)) or ((v==false) and "false") or "nil"
 end
+
+toStr = tostring
 
 function nFormat3(n)
     return string.format("%.3f", n or 0)
@@ -464,3 +474,9 @@ local t0 = GetTimePreciseSec()
 function tFormat3(t)
     return string.format("%.3f", (t or 0) - t0)
 end
+
+function stripEol(s)
+    if not s then return nil end
+    return s:gsub("\n", " ")
+end
+
