@@ -30,27 +30,22 @@ function BlizGlobalEventsListener:register(zelf, eventHandlers, handlersForAddon
             counter[eventName] = counter[eventName] + 1
         end
 
-        -- pass the counter as the last arg
-        if select("#", ...) == 0 then
-            -- no args were passed in from the Bliz event, so don't include "..."
-            eventHandlers[eventName](zelf, eventName, counter[eventName])
-        else
-            -- pass along the args provided by the Bliz event as "..."
-            --print("---> eventName",eventName, "counter",counter[eventName])
-            eventHandlers[eventName](zelf, ..., eventName, counter[eventName])
-        end
+        -- pass along the args provided by the Bliz event as "..."
+        eventHandlers[eventName](zelf, eventName, counter[eventName], ...)
     end
 
     local eventListenerFrame = CreateFrame(FrameType.FRAME, ADDON_NAME.."BlizGlobalEventsListener")
     eventListenerFrame:SetScript(Script.ON_EVENT, dispatcher)
 
-    -- handle the ADDON_LOADED event for specific addons
+    --
+    -- ADDON_LOADED - register handlers for listed addons - each addon will trigger its own ADDON_LOADED event
+    --
 
-    local oldHandler = eventHandlers.ADDON_LOADED
-    local newHandler = function(zelf, loadedAddonName)
+    local oldHandler = eventHandlers.ADDON_LOADED -- preserve the existing handler (if any) before we create a new handler
+    local new_ADDON_LOADED_handler = function(zelf, eventName, count, loadedAddonName)
         --[START CALLBACK]--
         if oldHandler then
-            zebug.trace:print("triggering the existing ADDON_LOADED handler", oldHandler)
+            zebug.warn:print("triggering the existing ADDON_LOADED handler", oldHandler)
             oldHandler(zelf)
         end
 
@@ -62,12 +57,14 @@ function BlizGlobalEventsListener:register(zelf, eventHandlers, handlersForAddon
             if addonName == loadedAddonName then
                 zebug.info:print("invoking", addonName)
                 handler(zelf, addonName)
+                handlersForAddonLoadedEvents[addonName] = nil
+                break
             end
         end
         --[END CALLBACK]--
     end
 
-    eventHandlers.ADDON_LOADED = newHandler
+    eventHandlers.ADDON_LOADED = new_ADDON_LOADED_handler
 
     -- handle GENERIC events
 
