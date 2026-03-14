@@ -511,8 +511,8 @@ end
 
 ---@param event string|Event metadata describing the instigating event - good for debugging
 function Zebug:event(event)
-    event = event or ADDON_SYMBOL_TABLE.eventBridge
-    assert(event,"can't set nil event!") -- TODO: replace with event = event or UNKNOWN_EVENT
+    event = event or ADDON_SYMBOL_TABLE.eventBridge or "EvEnT" -- tolerate nil events
+    --assert(event,"can't set nil event!")
     --assert(isTable(event),"event obj must be a table!")
     --assert(event.getFullName,"provided param is not actually an Event object!")
     self.zEvent = event
