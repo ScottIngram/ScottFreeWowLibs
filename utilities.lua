@@ -315,7 +315,10 @@ function serialize(val, name, skipnewlines, depth)
     elseif type(val) == "string" then
         tmp = tmp .. string.format("%q", val)
     else
-        tmp = tmp .. "\"[inserializeable datatype:" .. type(val) .. "]\""
+        -- misappropriate the skipnewlines flag to also mean "skip fluff"
+        if not skipnewlines then
+            tmp = tmp .. "\"[undeserializable datatype:" .. type(val) .. "]\""
+        end
     end
 
     return tmp
