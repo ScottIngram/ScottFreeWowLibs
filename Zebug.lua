@@ -47,13 +47,14 @@ local SPEAKING_VOLUME = {
     INFO  = 4,
     WARN  = 6,
     ERROR = 8,
-    NONE  = 10,
+    MUTE  = 10,
 }
 local SPEAKING_VOLUMES_NAMES = {
     [SPEAKING_VOLUME.TRACE] = "TRACE",
     [SPEAKING_VOLUME.INFO]  = "INFO ",
     [SPEAKING_VOLUME.WARN]  = "WARN ",
     [SPEAKING_VOLUME.ERROR] = "ERROR",
+    [SPEAKING_VOLUME.MUTE] = "MUTE",
 }
 ZebugVolumesNames = SPEAKING_VOLUMES_NAMES
 
@@ -66,15 +67,15 @@ ZebugVolumesNames = SPEAKING_VOLUMES_NAMES
 ---@field _king string
 ---@field dynamicName boolean true if name is a function
 ---@field owner any the class/object responsible for deploying the event
----@field mySpeakingVolume ZebugSpeakingVolume
+---@field lowestAllowedSpeakingVolumeOverride ZebugSpeakingVolume
 
 ---@type Event
 Event = {}
 local eCounter = {}
 
 ---@return Event
----@param mySpeakingVolume ZebugSpeakingVolume a lower volume (such as NONE, TRACE, or INFO) will produce less debugging output. it will SUPERCEDE the volume "foo" of any zebug.foo:event(thisEvent)
-function Event:new(owner, name, count, mySpeakingVolume, indent)
+---@param lowestAllowedSpeakingVolumeOverride ZebugSpeakingVolume a lower volume (such as NONE, TRACE, or INFO) will produce less debugging output. it will SUPERCEDE the volume "foo" of any zebug.foo:event(thisEvent)
+function Event:new(owner, name, count, lowestAllowedSpeakingVolumeOverride, indent)
     assert(owner, "'owner' param is missing")
     assert(name, "'name' param is missing")
     assert(isString(name) or isFunction(name), "'name' is wrong type. Must be string or func.")
@@ -97,7 +98,7 @@ function Event:new(owner, name, count, mySpeakingVolume, indent)
         dynamicName=isFunction(name),
         count=count,
         indent=indent,
-        mySpeakingVolume = mySpeakingVolume,
+        lowestAllowedSpeakingVolumeOverride = lowestAllowedSpeakingVolumeOverride,
         color = c,
         colorOpener = co,
         ufoType="Event",
@@ -133,23 +134,23 @@ function Event:muteUnlessKing(germ)
     local label = (germ.getLabel and germ:getLabel()) or "NoLaBeL"
     --print("e:MUK", "ufoType =(", germ.ufoType, ")", germ, germ:toString(), "label =", label, "- king =",self._king)
     if self._king and (self._king == label) then
-        if not self.OLD_mySpeakingVolume then
-            self.OLD_mySpeakingVolume = self.mySpeakingVolume
+        if not self.OLD_lowestAllowedSpeakingVolumeOverride then
+            self.OLD_lowestAllowedSpeakingVolumeOverride = self.lowestAllowedSpeakingVolumeOverride
         end
-        self.mySpeakingVolume = -10
+        self.lowestAllowedSpeakingVolumeOverride = -10
     end
 end
 
 function Event:unMute()
-    if not self.OLD_mySpeakingVolume then return end
-    self.mySpeakingVolume = self.OLD_mySpeakingVolume
-    self.OLD_mySpeakingVolume = nil
+    if not self.OLD_lowestAllowedSpeakingVolumeOverride then return end
+    self.lowestAllowedSpeakingVolumeOverride = self.OLD_lowestAllowedSpeakingVolumeOverride
+    self.OLD_lowestAllowedSpeakingVolumeOverride = nil
 end
 
 ---@class Zebug -- IntelliJ-EmmyLua annotation
 ---@field isZebug boolean
 ---@field color table
----@field mySpeakingVolume ZebugSpeakingVolume
+---@field myLineSpeakingVolume ZebugSpeakingVolume
 ---@field lowestAllowedSpeakingVolume ZebugSpeakingVolume
 ---@field indentWidth number
 ---@field zEvent Event
@@ -165,12 +166,11 @@ end
 ---@field ERROR ZebugSpeakingVolume
 ---@field NONE ZebugSpeakingVolume
 Zebug = {
-    MUTE  = -10, -- TODO: fix ambiguity
     TRACE = SPEAKING_VOLUME.TRACE,
     INFO  = SPEAKING_VOLUME.INFO,
     WARN  = SPEAKING_VOLUME.WARN,
     ERROR = SPEAKING_VOLUME.ERROR,
-    NONE  = SPEAKING_VOLUME.NONE,
+    MUTE  = SPEAKING_VOLUME.MUTE,
 }
 
 ---@type table<string,Zebuggers>
@@ -287,15 +287,15 @@ local function isZebuggerObj(zelf)
     return zelf and zelf.isZebug
 end
 
----@param mySpeakingVolume ZebugSpeakingVolume
+---@param myLineSpeakingVolume ZebugSpeakingVolume
 ---@return Zebug
-local function newInstance(mySpeakingVolume, lowestAllowedSpeakingVolume, sharedData)
+local function newInstance(myLineSpeakingVolume, lowestAllowedSpeakingVolume, sharedData)
     ---@type Zebug
     local self = {
         isZebug = true,
-        level = mySpeakingVolume,
-        color = COLORS[mySpeakingVolume],
-        mySpeakingVolume = mySpeakingVolume,
+        level = myLineSpeakingVolume,
+        color = COLORS[myLineSpeakingVolume],
+        myLineSpeakingVolume = myLineSpeakingVolume,
         lowestAllowedSpeakingVolume = lowestAllowedSpeakingVolume,
         indentWidth = 5,
         sharedData = sharedData,
@@ -403,9 +403,16 @@ function Zebug:isMute()
     if (self.zEvent == IS_MUTE) then
         return true
     end
-    local speakingVolume = (isEventObj(self.zEvent) and self.zEvent.mySpeakingVolume) or self.mySpeakingVolume
+    local lowestAllowedSpeakingVolume = (isEventObj(self.zEvent) and self.zEvent.lowestAllowedSpeakingVolumeOverride) or self.lowestAllowedSpeakingVolume
+--[[
+    print(
+            "orig toleranceMin",SPEAKING_VOLUMES_NAMES[self.lowestAllowedSpeakingVolume],self.lowestAllowedSpeakingVolume,
+            "new toleranceMin",SPEAKING_VOLUMES_NAMES[lowestAllowedSpeakingVolume],lowestAllowedSpeakingVolume,
+            "zLineVolm",self.myLineSpeakingVolume, "isMute?",self.myLineSpeakingVolume < lowestAllowedSpeakingVolume
+    )
+]]
 
-    return speakingVolume < self.lowestAllowedSpeakingVolume
+    return self.myLineSpeakingVolume < lowestAllowedSpeakingVolume
 end
 
 function Zebug:isActive()
@@ -520,14 +527,14 @@ function Zebug:event(event)
 end
 
 ---@param event string|Event metadata describing the instigating event - good for debugging
----@param mySpeakingVolume ZebugSpeakingVolume a lower volume (such as NONE, TRACE, or INFO) will produce less debugging output. it will SUPERCEDE the volume "foo" of any zebug.foo:event(thisEvent)
-function Zebug:newEvent(owner, name, count, mySpeakingVolume, indent)
-    if self:isMute() and mySpeakingVolume == nil then
+---@param lowestAllowedSpeakingVolumeOverride ZebugSpeakingVolume supersedes the "FOO" volume set via Zebug:new(Zebug.FOO) when the zebug group was created
+function Zebug:newEvent(owner, name, count, lowestAllowedSpeakingVolumeOverride, indent)
+    if self:isMute() and lowestAllowedSpeakingVolumeOverride == nil then
         -- save CPU cycles when mute
-        -- but allow and incoming mySpeakingVolume to dynamically reset is_mute
+        -- but allow any upcoming lowestAllowedSpeakingVolumeOverride to dynamically reset is_mute
         self.zEvent = IS_MUTE
     else
-        self.zEvent = Event:new(owner, name, count, mySpeakingVolume, indent)
+        self.zEvent = Event:new(owner, name, count, lowestAllowedSpeakingVolumeOverride, indent)
     end
     return self
 end
@@ -668,7 +675,7 @@ end
 function Zebug:out(indentWidth, indentChar, ...)
     assert(isZebuggerObj(self), ERR_MSG)
 
-    if not self.zEvent and ADDON_SYMBOL_TABLE.eventBridge ~= IS_MUTE then
+    if (not self.zEvent) and ADDON_SYMBOL_TABLE.eventBridge ~= IS_MUTE then
         self.zEvent = ADDON_SYMBOL_TABLE.eventBridge
         --print("zzzeeebbbuuuggg ADDON_SYMBOL_TABLE.eventBridge = ", ADDON_SYMBOL_TABLE.eventBridge)
     end
@@ -691,7 +698,7 @@ function Zebug:out(indentWidth, indentChar, ...)
     -- <UFO> {rt1} ============================== Ufo/PLAYER_ENTERING_WORLD_1 UFO()~[50] END!
 
     local file, method, line, eventName, eMsg, owner = self:getHeader()
-    local speakingVolumeMsg = SPEAKING_VOLUMES_NAMES[self.mySpeakingVolume]
+    local speakingVolumeMsg = SPEAKING_VOLUMES_NAMES[self.myLineSpeakingVolume]
     local shoName = not self.suppressMethodName
 
     local out1 = {
