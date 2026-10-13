@@ -7,6 +7,7 @@
 
 local ADDON_NAME, ADDON_SYMBOL_TABLE = ...
 ADDON_SYMBOL_TABLE.Wormhole() -- Lua voodoo magic that replaces the current Global namespace with the Ufo object
+BLIZ = _G -- just for clarity, make it clear when I'm invoking a stray Blizzard variable, function, API, etc.
 
 local zebug
 
@@ -483,3 +484,15 @@ function stripEol(s)
     return s:gsub("\n", " ")
 end
 
+WOW_PROJECT_FOREVER = WOW_PROJECT_FOREVER or BLIZ.WOW_PROJECT_CAMELOT
+
+function isForever(s)
+    --print("utils checking WOW_PROJECT_ID",WOW_PROJECT_ID, "WOW_PROJECT_FOREVER",WOW_PROJECT_FOREVER, "WOW_PROJECT_MAINLINE",WOW_PROJECT_MAINLINE, "WOW_PROJECT_CAMELOT",WOW_PROJECT_CAMELOT)
+    return BLIZ.WOW_PROJECT_ID == WOW_PROJECT_FOREVER
+end
+
+function isModern(s)
+    return BLIZ.WOW_PROJECT_ID == BLIZ.WOW_PROJECT_MAINLINE
+end
+isRetail = isModern
+isMainline = isModern

@@ -90,6 +90,7 @@ function Event:new(owner, name, count, lowestAllowedSpeakingVolumeOverride, inde
     end
 
     local c, co = getNextColor()
+    --print("NEW: c",c)
 
     ---@type Event
     local self = {
@@ -190,23 +191,33 @@ local IS_MUTE = "IS_MUTE"
 
 local COLORS = { }
 COLORS[SPEAKING_VOLUME.TRACE] = GetClassColorObj("WARRIOR")
-COLORS[SPEAKING_VOLUME.INFO]  = GetClassColorObj("MONK")
+COLORS[SPEAKING_VOLUME.INFO]  = GetClassColorObj("MONK") or GetClassColorObj("DRUID")
 COLORS[SPEAKING_VOLUME.WARN]  = GetClassColorObj("ROGUE")
-COLORS[SPEAKING_VOLUME.ERROR] = GetClassColorObj("DEATHKNIGHT")
+COLORS[SPEAKING_VOLUME.ERROR] = GetClassColorObj("DEATHKNIGHT") or  GetClassColorObj("PALADIN")
 
-local CLASSES = {"HUNTER", "WARLOCK", --[["PRIEST",]] "PALADIN", "MAGE", "ROGUE", "DRUID", "SHAMAN", "WARRIOR", "DEATHKNIGHT", "MONK", "DEMONHUNTER", "EVOKER"};
+local CLASSES
+if isModern() then
+    CLASSES = {"HUNTER", "WARLOCK", --[["PRIEST",]] "PALADIN", "MAGE", "ROGUE", "DRUID", "SHAMAN", "WARRIOR", "DEATHKNIGHT", "MONK", "DEMONHUNTER", "EVOKER"};
+else
+    CLASSES = {"HUNTER", "WARLOCK", --[["PRIEST",]] "PALADIN", "MAGE", "ROGUE", "DRUID", "SHAMAN", "WARRIOR" };
+end
+
 local maxColor = #CLASSES
 local COLORZ
 local COLOR_OPENER
-local colorCount = 1
+local colorCount = 0
 function getNextColor()
     if not COLORZ then
         COLORZ = {}
         COLOR_OPENER = {}
-        for i, c in ipairs(CLASSES) do
-            COLORZ[i] = GetClassColorObj(c)
-            COLOR_OPENER[i] = COLORZ[i]:WrapTextInColorCode(""):sub(1,-3)
-            --print(COLORZ[i]:WrapTextInColorCode(c))
+        for i, class in ipairs(CLASSES) do
+            local color = GetClassColorObj(class)
+            if color then
+                COLORZ[i] = color
+                --print("i",i, "maxColor",maxColor, "class",class,"color", color, "COLORZ[i]",COLORZ[i])
+                COLOR_OPENER[i] = COLORZ[i]:WrapTextInColorCode(""):sub(1,-3)
+                --print(COLORZ[i]:WrapTextInColorCode(c))
+            end
         end
     end
     if colorCount == maxColor then
@@ -214,7 +225,7 @@ function getNextColor()
     else
         colorCount = colorCount + 1
     end
-    --print(colorCount, COLORZ[colorCount]:WrapTextInColorCode(CLASSES[colorCount]))
+    --print("getNextColor()", colorCount, "color",COLORZ[colorCount], COLORZ[colorCount]:WrapTextInColorCode(CLASSES[colorCount]))
     return COLORZ[colorCount], COLOR_OPENER[colorCount]
 end
 -------------------------------------------------------------------------------
@@ -422,6 +433,7 @@ end
 
 function Zebug:colorize(str)
     if not self.sharedData.doColors then return str end
+    --print("str",str, "self",self, "self.color",self.color)
     return self.color:WrapTextInColorCode(str)
 end
 
