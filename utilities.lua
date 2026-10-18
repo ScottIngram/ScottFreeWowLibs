@@ -483,3 +483,13 @@ function stripEol(s)
     return s:gsub("\n", " ")
 end
 
+function findElement(array, member)
+    local found
+    for i, v in ipairs(array) do
+        if v == member then
+            found = i
+        end
+    end
+
+    return found
+end
