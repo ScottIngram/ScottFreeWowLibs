@@ -2,6 +2,11 @@ local ADDON_NAME, ADDON_SYMBOL_TABLE = ...
 
 ADDON_SYMBOL_TABLE.Wormhole() -- Lua voodoo magic that replaces the current Global namespace with the Ufo
 
+Bliz = _G
+BLIZ = _G
+XML = _G
+XML_UI = _G
+
 QUOTE = "\""
 EOL = "\n"
 EOLx2 = "\n\n"
