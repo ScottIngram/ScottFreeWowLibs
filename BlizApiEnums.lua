@@ -357,6 +357,17 @@ ModifierKeyIsDown = {
     [ModifierKey.META ] = IsMetaKeyDown,
 }
 
+---@class PvPFaction
+PvPFaction = {
+    Horde = 0,
+    Alliance = 1
+}
+--@type table<string, number> English "Horde" or "Alliance" -> 0 or 1
+disfactionMapByNameEn = {
+    [Bliz.PLAYER_FACTION_GROUP[PvPFaction.Horde   ]] = PvPFaction.Horde,
+    [Bliz.PLAYER_FACTION_GROUP[PvPFaction.Alliance]] = PvPFaction.Alliance,
+}
+
 -- some useful regular expressions I used to reformat raw listings into the above code
 -- REGEX 1
 -- <xs:element name="([^"]*)".+
