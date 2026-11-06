@@ -4,6 +4,7 @@ ADDON_SYMBOL_TABLE.Wormhole() -- Lua voodoo magic that replaces the current Glob
 
 Bliz = _G
 BLIZ = _G
+Bliz_API = _G
 XML = _G
 XML_UI = _G
 

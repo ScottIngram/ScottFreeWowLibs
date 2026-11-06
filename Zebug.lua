@@ -148,6 +148,7 @@ function Event:unMute()
 end
 
 ---@class Zebug -- IntelliJ-EmmyLua annotation
+---@field devMode boolean when true, no events are set to IS_MUTE
 ---@field isZebug boolean
 ---@field color table
 ---@field myLineSpeakingVolume ZebugSpeakingVolume
@@ -516,6 +517,7 @@ function Zebug:ifThen(conditional)
     end
 end
 
+---@return Zebug
 ---@param event string|Event metadata describing the instigating event - good for debugging
 function Zebug:event(event)
     event = event or ADDON_SYMBOL_TABLE.eventBridge or "EvEnT" -- tolerate nil events
@@ -526,11 +528,12 @@ function Zebug:event(event)
     return self
 end
 
+---@return Zebug
 ---@param event string|Event metadata describing the instigating event - good for debugging
 ---@param lowestAllowedSpeakingVolumeOverride ZebugSpeakingVolume supersedes the "FOO" volume set via Zebug:new(Zebug.FOO) when the zebug group was created
 function Zebug:newEvent(owner, name, count, lowestAllowedSpeakingVolumeOverride, indent)
-    if self:isMute() and lowestAllowedSpeakingVolumeOverride == nil then
-        -- save CPU cycles when mute
+    if (not Zebug.devMode) and self:isMute() and (lowestAllowedSpeakingVolumeOverride == nil) then
+        -- save CPU cycles when mute when not in devMode
         -- but allow any upcoming lowestAllowedSpeakingVolumeOverride to dynamically reset is_mute
         self.zEvent = IS_MUTE
     else
@@ -539,11 +542,13 @@ function Zebug:newEvent(owner, name, count, lowestAllowedSpeakingVolumeOverride,
     return self
 end
 
+---@return Zebug
 function _eventStart(self, event)
     self.zEventMsg = START
     return self:event(event)
 end
 
+---@return Zebug
 function _eventEnd(self, event)
     self.zEventMsg = END
     return self:event(event)
@@ -562,6 +567,7 @@ function Zebug:setGlobalEvent(event)
     end
 end
 
+---@return Zebug
 ---@param caller any a unique identifier, e.g. self or "ID123"
 function Zebug:owner(caller)
     if self:isMute() then
@@ -572,6 +578,7 @@ function Zebug:owner(caller)
     return self
 end
 
+---@return Zebug
 function Zebug:noName()
     self.suppressMethodName = true
     return self
@@ -601,9 +608,13 @@ function Zebug:ifMe1st(caller)
     end
 end
 
+local seen = {}
 function getNickName(obj)
-    return obj and (
+    if seen[obj] then return "LoOp!" end -- infinite loop guard
+    seen[obj] = true
+    local result =  obj and (
         (isString(obj) and obj)
+        or (isNumber(obj) and obj)
         or (isFunction(obj) and (obj()))
         or obj.toString and obj:toString()
         or (obj.getLabel and obj:getLabel())
@@ -612,6 +623,9 @@ function getNickName(obj)
         or obj.ufoType
         or tostring(obj)
     ) or "nil"
+
+    seen[obj] = nil
+    return result
 end
 
 function Zebug:alert(msg)
@@ -675,7 +689,7 @@ end
 function Zebug:out(indentWidth, indentChar, ...)
     assert(isZebuggerObj(self), ERR_MSG)
 
-    if (not self.zEvent) and ADDON_SYMBOL_TABLE.eventBridge ~= IS_MUTE then
+    if (not self.zEvent) and (ADDON_SYMBOL_TABLE.eventBridge ~= IS_MUTE) then
         self.zEvent = ADDON_SYMBOL_TABLE.eventBridge
         --print("zzzeeebbbuuuggg ADDON_SYMBOL_TABLE.eventBridge = ", ADDON_SYMBOL_TABLE.eventBridge)
     end
