@@ -16,15 +16,15 @@ if isForever() then
     -------------------------------------------------------------------------------
     -- Missing Functions
     -------------------------------------------------------------------------------
-    print("ForeverCaulk 1... GetSpecialization",GetSpecialization)
+    --print("ForeverCaulk 1... GetSpecialization",GetSpecialization)
 
     GetSpecialization = GetSpecialization or function()
         local className, classFile, classId = UnitClass("player")
-        print("ForeverCaulk.GetSpecialization() className",className, "classId",classId)
+        --print("ForeverCaulk.GetSpecialization() className",className, "classId",classId)
         return classId
     end
 
-    print("ForeverCaulk 2... GetSpecialization",GetSpecialization)
+    --print("ForeverCaulk 2... GetSpecialization",GetSpecialization)
 
 else
     print "Not isForever()"

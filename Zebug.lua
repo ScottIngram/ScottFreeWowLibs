@@ -197,11 +197,7 @@ COLORS[SPEAKING_VOLUME.WARN]  = GetClassColorObj("ROGUE")
 COLORS[SPEAKING_VOLUME.ERROR] = GetClassColorObj("DEATHKNIGHT") or  GetClassColorObj("PALADIN")
 
 local CLASSES
-if isModern() then
-    CLASSES = {"HUNTER", "WARLOCK", --[["PRIEST",]] "PALADIN", "MAGE", "ROGUE", "DRUID", "SHAMAN", "WARRIOR", "DEATHKNIGHT", "MONK", "DEMONHUNTER", "EVOKER"};
-else
-    CLASSES = {"HUNTER", "WARLOCK", --[["PRIEST",]] "PALADIN", "MAGE", "ROGUE", "DRUID", "SHAMAN", "WARRIOR" };
-end
+CLASSES = {"HUNTER", "WARLOCK", --[["PRIEST",]] "PALADIN", "MAGE", "ROGUE", "DRUID", "SHAMAN", "WARRIOR", "DEATHKNIGHT", "MONK", "DEMONHUNTER", "EVOKER"};
 
 local maxColor = #CLASSES
 local COLORZ
@@ -211,13 +207,13 @@ function getNextColor()
     if not COLORZ then
         COLORZ = {}
         COLOR_OPENER = {}
-        for i, class in ipairs(CLASSES) do
-            local color = GetClassColorObj(class)
+        local n = 0
+        for i, classy in ipairs(CLASSES) do
+            local color = GetClassColorObj(classy)
             if color then
-                COLORZ[i] = color
-                --print("i",i, "maxColor",maxColor, "class",class,"color", color, "COLORZ[i]",COLORZ[i])
-                COLOR_OPENER[i] = COLORZ[i]:WrapTextInColorCode(""):sub(1,-3)
-                --print(COLORZ[i]:WrapTextInColorCode(c))
+                n = n + 1
+                COLORZ[n] = color
+                COLOR_OPENER[n] = COLORZ[n]:WrapTextInColorCode(""):sub(1,-3)
             end
         end
     end
@@ -529,7 +525,6 @@ function Zebug:ifThen(conditional)
     end
 end
 
----@return Zebug
 ---@param event string|Event metadata describing the instigating event - good for debugging
 function Zebug:event(event)
     event = event or ADDON_SYMBOL_TABLE.eventBridge or "EvEnT" -- tolerate nil events
