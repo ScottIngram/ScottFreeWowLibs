@@ -496,3 +496,13 @@ function isModern(s)
 end
 isRetail = isModern
 isMainline = isModern
+function findElement(array, member)
+    local found
+    for i, v in ipairs(array) do
+        if v == member then
+            found = i
+        end
+    end
+
+    return found
+end
